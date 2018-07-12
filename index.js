@@ -44,10 +44,8 @@ app.get('/',function(req,res){
     //If session is set, check if the user session is valid or not.
     var user = new User(req.session.uname, req.session.pword);
     user.isValid(function(err, response) {
-        if(err) {
-            throw err;
-            return;
-        }
+        if(err) throw err;
+            
         if(response) {
             // If valid, redirect to the home page (the main page for the game). 
             res.redirect('/home');
