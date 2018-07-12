@@ -1,0 +1,62 @@
+<div class="row" ng-controller="robotTypes">
+  <div class="col-sm-6">
+    <div class="card border-dark" style="width: 27rem;">
+        <div class="card-header">
+            <b>Combiners</b>
+        </div>
+        <ul class="list-group list-group-flush">
+            <li class="list-group-item" ng-repeat="row in combiners">
+                <div class="card  border-dark">
+                    <div class="row no-gutters">
+                        <div class="align-self-center">
+                            <img src="img/robot/{{row.image}}" style="max-height: 90px; max-width: 90px;">
+                        </div>
+                        <div class="col">
+                            <div class="card-block p-1">
+                                <h6 class="card-title">{{row.robot_type}}</h6>
+                                <p class="card-text small">
+                                    Produces <i ng-repeat="item in row.produce">{{item.item}}</i> every {{row.time_req}} sec.<br/>
+                                    Requires <i ng-repeat="item in row.consume">{{item.item}} ({{item.qty}}), </i><br/>
+                                    Energy Cost per Production: <i class="fas fa-burn"></i> -{{row.energy}}  <br/>
+                                    Initial Cost: <i class="fas fa-burn"></i> -{{row.cost}}  
+                                </p>
+                                <a href="robot_type/addRobot?robot_type_id={{row.robot_type_id}}" class="btn btn-primary btn-sm">Get this!</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>            
+            </li>
+        </ul>
+    </div>
+  </div>
+  <div class="col-sm-6">
+    <div class="card border-dark" style="width: 27rem;">
+        <div class="card-header">
+            <b>Diffusors</b>
+        </div>
+        <ul class="list-group list-group-flush">
+            <li class="list-group-item" ng-repeat="row in diffusors">
+                <div class="card  border-dark">
+                    <div class="row no-gutters">
+                        <div class="align-self-center">
+                            <img src="img/robot/{{row.image}}" style="max-height: 90px; max-width: 90px;">
+                        </div>
+                        <div class="col">
+                            <div class="card-block p-1">
+                                <h6 class="card-title">{{row.robot_type}}</h6>
+                                <p class="card-text small">
+                                    Produces <i ng-repeat="item in row.produce">{{item.item}} ({{item.qty}}), </i> every {{row.time_req}} sec.<br/>
+                                    Requires <i ng-repeat="item in row.consume">{{item.item}}</i><br/>
+                                    Energy Released per Production: <i class="fas fa-burn"></i> +{{row.energy}}  <br/>
+                                    Energy Limit: <i class="fas fa-burn"></i> {{row.energy_limit}} <br/>
+                                    Initial Cost: <i class="fas fa-burn"></i> -{{row.cost}} 
+                                </p>
+                                <a href="robot_type/addRobot?robot_type_id={{row.robot_type_id}}" class="btn btn-primary btn-sm">Get this!</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </li>
+        </ul>
+    </div>
+</div>

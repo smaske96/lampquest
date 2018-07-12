@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" integrity="sha384-WskhaSGFgHYWDcbwN70/dfYBj47jz9qbsMId/iRN3ewGhXQFZCSftd1LZCfmhktB" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.1.0/css/all.css" integrity="sha384-lKuwvrZot6UHsBSfcMvOkWwlCMgc0TaWr+30HWe3a4ltaBwTZhyTEggF5tJv8tbt" crossorigin="anonymous">
+    <link rel="stylesheet" type="text/css" href="css/common.css">
+    
+    <script src = "scripts/lib/angular.min.js"></script>
+    <script src = "scripts/lib/angular-route.min.js"></script>
+    <title>LampQuest</title>
+  </head>
+  <body ng-app="mainApp">
+    <nav class="navbar navbar-expand-sm bg-dark navbar-dark">
+        <!-- Brand/logo -->
+        <a class="navbar-brand" href="#">LampQuest</a>
+        
+        <!-- Links -->
+        <ul class="navbar-nav">
+            <li class="nav-item">
+                <a class="nav-link"  ng-class="{ active: isActive('#!/')}" href="#!/">Home</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" ng-class="{ active: isActive('#!/factory')}" href="#!/factory">Factory</a>
+            </li>
+        </ul>
+        <ul class="navbar-nav  ml-auto">
+            <li class="nav-item">
+            <a class="nav-link" href="/user/signout">Sign Out</a>
+            </li>
+        </ul>
+    </nav>
+    <div class="container-fluid"  ng-controller="planetParameters" >
+        <div class="row">
+            <!-- Main Content -->
+            <div class="col-sm-8 cell" ng-view>
+                <!--
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <h4 class="alert-heading">Hi {{username}}! </h4>
+                    <p>Welcome to the planet {{planet_name}}! Build robots in your planet to terraform the planet. The items required to complete your mission is shown on the right.</p>
+                    <hr>
+                    <p class="mb-0">Good Luck and use your resources wisely!</p>
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                -->
+                
+                
+            </div>
+            <!-- Side Contents-->
+            <div class="col-sm-4 cell">
+                <div class="card border-secondary mb-3" >
+                    <div class="card-header" ng-controller="userParameters">
+                        <span width="50%" class="float-sm-left"><i class="fas fa-user"></i>&nbsp;&nbsp;<a href='#'>{{username}}</a></span>
+                        <span width="50%" class="float-sm-right">Experience: {{experience}}</span>
+                    </div>
+                    <div class="card-body text-center" ng-controller="userParameters">
+                        <h4 class="card-title">Planet {{planet_name}}</h4>
+                        <img src="img/planet/{{planet_image}}" alt="{{planet_name}}" class="img-thumbnail" width="300px">
+                    </div>
+                    <ul class="list-group list-group-flush text-center">
+                        <li class="list-group-item"><b>Energy Available: <i class="fas fa-burn"></i> {{energy}}</b></li>
+                    </ul>
+                </div>
+                <div class="card border-secondary mb-3 text-center">
+                    <div class="card-header">
+                        <b>Resources Required</b>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Items</th>
+                                    <th>Req. Qty.</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="item in goals">
+                                    <td>{{item.item_name}}</td>
+                                    <td>{{item.required_qty}}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js" integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T" crossorigin="anonymous"></script>
+    <script src = "scripts/home.js"></script>
+  </body>
+</html>

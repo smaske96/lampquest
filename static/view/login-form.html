@@ -1,0 +1,23 @@
+<form class="form-signin" action="/user/login" method="POST" ng-controller="loginControl" ng-submit="encryptPassword()">
+    <h2 class="form-signin-heading">Sign In</h2>
+    <div class="form-group">
+        <label for="inputUsername" class="sr-only">Username</label>
+        <input type="text" id="inputUsername" name="inputUsername" class="form-control" placeholder="Username" required autofocus>
+        <div class="text-danger" ng-if="invalid">Invalid Username or Password</div>
+    </div>
+    <div class="form-group">
+        <label for="inputPassword" class="sr-only">Password</label>
+        <input type="password" name="inputPassword" ng-model="inputPassword" id="inputPassword" class="form-control" placeholder="Password" required>
+    </div>
+    <div class="form-group">
+        <div class="checkbox">
+        <label>
+            <input type="checkbox" name="inputRemember" id="inputRemember" value="true"> Remember me
+        </label>
+        </div>
+    </div>
+    <div class="form-group">
+        <button class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button>
+    </div>
+    <div class="text-center">Not a member yet? <a href='#!/signup'>Sign Up</a>!</div>
+</form>

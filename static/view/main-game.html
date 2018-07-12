@@ -1,0 +1,86 @@
+<!-- List of available resources in the planet -->
+<div class="card border-secondary mb-3 text-center" ng-controller="ownedItems">
+    <div class="card-header">
+        <b>Resources Available</b>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="card border-secondary m-1" style="width: 15rem;" ng-repeat="item in owned">
+                <div class="card-body">
+                    <img class="img-fluid" src="img/item/{{item.item_image}}" alt="{{item.item_name}}" style="max-height: 120px; max-width: 120px;">
+                    <h5 class="card-title">{{item.item_name}}</h5>
+                    <p class="card-text">Available Qty: {{item.owned_qty}}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- List of robots owned -->
+<div class="card border-secondary mb-3" ng-controller="ownedRobots">
+    <div class="card-header">
+        <b>Robots You Own</b>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="card  border-dark m-1" ng-repeat="(id, type) in owned_robots" style="width:100%">
+                <div class="row no-gutters">
+                    <div class="align-self-center">
+                        <img src="img/robot/{{type.image}}" style="max-height: 90px; max-width: 90px;">
+                    </div>
+                    <div class="col">
+                        <div class="card-block p-1">
+                            <h6 class="card-title">{{type.robot_type}} {{type.type == 'combiner' ? '(C)': '(D)'}} </h6>
+                            <div ng-switch="type.type">
+                                <p class="card-text small" ng-switch-when="combiner">
+                                    Produces <i ng-repeat="item in type.produce">{{item.item}}</i> every {{type.time_req}} sec.<br/>
+                                    Requires <i ng-repeat="item in type.consume">{{item.item}} ({{item.qty}}), </i><br/>
+                                    Energy Cost per Production: <i class="fas fa-burn"></i> -{{type.energy}}  <br/>
+                                </p>
+                                <p class="card-text small" ng-switch-when="diffusor">
+                                    Produces <i ng-repeat="item in type.produce">{{item.item}} ({{item.qty}}), </i> every {{type.time_req}} sec.<br/>
+                                    Requires <i ng-repeat="item in type.consume">{{item.item}}</i><br/>
+                                    Energy Released per Production: <i class="fas fa-burn"></i> +{{type.energy}}  <br/>
+                                    Energy Limit: <i class="fas fa-burn"></i> {{type.energy_limit}}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="align-self-center p-1">
+                        <table class="table table-hover table-bordered table-sm" style="width: 25rem;">
+                            <thead>
+                                <th class="text-center" scope="col" colspan="2">Robots</th>
+                            <thead>    
+                            <tbody>
+                                <tr ng-repeat="robot in type.robot">
+                                    <td>{{robot.robot_name}}</td>    
+                                    <td class="text-right">Enabled: <input type="checkbox"  ng-checked="robot.enabled==1" ng-click="toggleEnabled(robot.robot_id)"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="w-100 text-center" ng-show="!owned_robots"><b>You don't own any robots in this planet yet. Go to <a href="#!/factory">Factory</a> to get robots.</b></div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal - Level Complete - Start -->
+<div class="modal modal-centered" id="modal_level_complete" tabindex="-1" data-backdrop="static" data-keyboard="false" role="dialog" ng-controller="complete">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Level Complete</h5>
+      </div>
+      <div class="modal-body">
+        <p>Congratulations! You have successfully terraformed the planet.</p>
+      </div>
+      <div class="modal-footer">
+        <a href='/' class="btn btn-primary">Go to Next Level</a>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Modal - Level Complete - End -->

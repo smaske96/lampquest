@@ -1,0 +1,34 @@
+<form class="form-signup" id="signUp" name="signUp" method="POST" action="/user/addnew" ng-controller="signupControl" ng-submit="encryptPassword()" novalidate>
+    <h2 class="form-signup-heading">Sign Up</h2>
+    <div class="form-group">
+        <label for="inputUsername" class="sr-only">Username</label>
+        <input type="text" name="inputUsername" ng-model="inputUsername" class="form-control" placeholder="Username" minlength="3" maxlength="255" username-available required autofocus>
+        <div class="text-danger" ng-show = "signUp.inputUsername.$dirty && signUp.inputUsername.$invalid">
+            <span ng-show = "signUp.inputUsername.$error.required">Username is required.</span>
+            <span ng-show = "signUp.inputUsername.$error.usernameExists">Username already exists.</span>
+            <span ng-show = "signUp.inputUsername.$error.minlength || signUp.inputUsername.$error.maxlength">Username should have 3 to 255 characters.</span>
+        </div>
+    </div>
+    <div class="form-group">
+        <label for="inputPassword" class="sr-only">Password</label>
+        <input type="password" name = "inputPassword" ng-model="inputPassword" class="form-control" placeholder="Password" minlength="3" maxlength="255" required>
+        <div class="text-danger" ng-show = "signUp.inputPassword.$dirty && signUp.inputPassword.$invalid">
+            <span ng-show = "signUp.inputPassword.$error.required">Password is required.</span>
+            <span ng-show = "signUp.inputPassword.$error.minlength || signUp.inputPassword.$error.maxlength">Password should have 3 to 255 characters.</span>
+        </div>
+    </div>
+    <div class="form-group">
+        <label for="inputConfirmPassword" class="sr-only">Confirm Password</label>
+        <input type="password" name="inputConfirmPassword" ng-model="inputConfirmPassword" class="form-control" placeholder="Confirm Password" compare-to="inputPassword" required>
+        <div class="text-danger" ng-show="signUp.inputConfirmPassword.$dirty && signUp.inputConfirmPassword.$invalid">
+            <span ng-show = "signUp.inputConfirmPassword.$error.required">Password is required.</span>
+            <span ng-show = "signUp.inputConfirmPassword.$error.compareTo">Passwords don't match.</span>
+        </div>
+    </div>
+    <div class="form-group">
+        <button class="btn btn-lg btn-primary btn-block" type="submit" 
+            ng-disabled =  "signUp.$pristine || signUp.inputUsername.$invalid || signUp.inputPassword.$invalid || signUp.inputConfirmPassword.$invalid"
+        >Sign Up</button>
+    </div>
+    <div class="text-center">Already a member? <a href='#!/login'>Sign in</a>!</div>
+</form>

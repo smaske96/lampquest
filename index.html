@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" integrity="sha384-WskhaSGFgHYWDcbwN70/dfYBj47jz9qbsMId/iRN3ewGhXQFZCSftd1LZCfmhktB" crossorigin="anonymous">
+    <link rel="stylesheet" type="text/css" href="css/common.css">
+    
+    <script src = "scripts/lib/angular.min.js"></script>
+    <script src = "scripts/lib/angular-route.min.js"></script>
+    <title>LampQuest</title>
+  </head>
+  <body ng-app="loginApp" style="background: url(img/background_main.jpg);  background-repeat: no-repeat;  background-size: auto; background-position: center center;">
+    
+    <div class="container" style="margin-top: 50px;"> 
+        <div class="row cell">
+            <div class="col-sm-8">
+                <div class="jumbotron">
+                    <h1 class="display-3">LampQuest</h1>
+                    <p class="lead">Search for life across the planets in the Galaxy</p>
+                    <hr class="my-4">
+                    <p>Use automated robots to produce resources and terraform different planets in the galaxy. Use the available energy and resources wisely.</p>
+                    <p class="lead">
+                        <a class="btn btn-primary btn-lg" href="#" role="button" data-toggle="modal" data-target="#game_desc">Learn more</a>
+                    </p>
+                </div>
+            </div>
+            <!-- Side content with login/signup form-->
+            <div class="col-sm-4 card card-body bg-light" ng-view>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal Game Description Start -->
+    <div class="modal fade" id="game_desc" tabindex="-1" role="dialog" aria-labelledby="title" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="title">Game Description</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>The goal of the game is to terraform each planet that you are assigned. Each planet comes up with some initial resources and energy. For each assigned planet, you will be given a list of items and their required quantity that must be present in the planet to make it habitable.</p> 
+                <p>You needed use the automated robots from the factory to create new resources that are required for life in the planet. Each robot will cost you some initial energy. </p>
+                <p>There are two types of robots: combiners and diffusors. The combiners can combine two or more available resources to produce new items. These combiners requires some energy in each production. The diffusors can create multiple items from a single available resource. These diffusors will release some energy in each production. However diffusor come with certain energy limit, that is one the energy limit of the diffusor is reached, it won't be able to produce any more items and will remain idle.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal Game Description End -->
+    
+    
+
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js" integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T" crossorigin="anonymous"></script>
+    <script src = "scripts/lib/sha512.js"></script>
+    <script src = "scripts/login.js"></script>
+  </body>
+</html>
