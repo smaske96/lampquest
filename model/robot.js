@@ -130,6 +130,10 @@ class Robot {
                     
                 });              
             }
+            else {
+                // If energy is not sufficient, return false 
+                callback(null, false);
+            }
         });
     
     }
@@ -144,18 +148,18 @@ class Robot {
             var update = "UPDATE robot SET enabled = ? WHERE robot_id = ?";
             
             //Get new enabled value (opposite of previous) and update it
-            var new_enabled = result[0].enabled ? 0 : 1;
+            var new_enabled = result[0].enabled == 0 ? 1 : 0;
             con.query(update,[new_enabled, self.robot_id], function(err_update) {
                if (err_update) throw err_update;
                
-               // If enabled is turned off (original value = 1), delete the active record in item_robot
-               if(result[0].enabled == 1) {
+               // If enabled is turned off, delete the active record in item_robot
+               if(new_enabled == 0) {
                     var del = "DELETE FROM item_robot WHERE robot_id = ? AND build_end_time IS NULL";
                     con.query(del, [self.robot_id], function(err_delete) {
                         if (err_delete) callback(err_delete);
                     });
                }
-               // If enabled is turn on (original value = 0), insert new record in item_robot with start_time as current timestamp if the robot can produce
+               // If enabled is turn on, insert new record in item_robot with start_time as current timestamp if the robot can produce
                else {
                     self.canBuild(self, function(err_build, can_build) {
                         if(err_build)

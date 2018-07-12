@@ -16,10 +16,8 @@ class PlanetUser {
                         WHERE difficulty_level = ? \
                         LIMIT 1";
         con.query(sql, [this.user_id, difficulty], function (err, result) {
-            if (err) {
-                throw err;
-                return;
-            }
+            if (err) throw err;
+               
             
             // If there are no new planets available, return false
             if(result.affectedRows == 0) {
@@ -231,14 +229,34 @@ class PlanetUser {
                         
                         // Add new planet of higher difficulty 
                         self.addNewPlanet(difficulty + 1, function(err_new, result_new) {
-                            
-                            // Add experience point to user
-                            var exp_pts = "UPDATE user SET experience = experience + ? WHERE user_id = ?";
-                            con.query(exp_pts, [difficulty, self.user_id], function(err_exp) {
-                                if(err_exp) throw err_exp;
+                            if(err_new) throw err_new;
+                            //Check if new planet inserted successfully
+                            if(result_new) {
                                 
-                                callback(err_new, result_new);
-                            });
+                                // Add experience point to user
+                                var exp_pts = "UPDATE user SET experience = experience + ? WHERE user_id = ?";
+                                con.query(exp_pts, [difficulty, self.user_id], function(err_exp) {
+                                    if(err_exp) throw err_exp;
+                                    
+                                    callback(null, true);
+                                });
+                            }
+                            else {
+                                //No new planet were inserted 
+                                // Revert the completed flag in planet_user table and return false result 
+                                
+                                /**
+                                var revert = "UPDATE planet_user pu \
+                                                    INNER JOIN planet p ON p.planet_id = pu.planet_id \
+                                              SET pu.completed = 0 WHERE pu.user_id = ? AND p.difficulty_level = ?";
+                                con.query(revert, [self.user_id, difficulty], function(err_revert) {
+                                    if(err_revert) throw err_revert;
+                                    
+                                    callback(null, false);
+                                });
+                                **/
+                                callback(null, false);
+                            }
                             
                             
                         });
@@ -252,7 +270,64 @@ class PlanetUser {
         
     }
     
-    
+    resetPlanet(callback) {
+        var self = this;
+        
+        // Delete all log records for the planet 
+        var del_log = "DELETE FROM item_robot \
+                        WHERE robot_id IN ( \
+                            SELECT robot_id FROM robot NATURAL JOIN planet_user WHERE user_id = ? AND completed = 0 \
+                        )";
+                        
+        var del_robots = "DELETE FROM robot \
+                            WHERE planet_user_id = ( \
+                                SELECT planet_user_id \
+                                FROM planet_user \
+                                WHERE user_id = ? AND completed = 0 \
+                            )";
+        
+        var del_owned_items = "DELETE FROM planet_user_item \
+                               WHERE planet_user_id = ( \
+                                SELECT planet_user_id \
+                                FROM planet_user \
+                                WHERE user_id = ? AND completed = 0 \
+                              )";
+                              
+        var insert_init_items = "INSERT INTO planet_user_item (planet_user_id, item_id, owned_qty) \
+                                SELECT planet_user_id, item_id, available_qty \
+                                FROM planet_item_init_resource NATURAL JOIN planet_user \
+                                WHERE user_id = ? AND completed = 0";
+        
+        var update_energy = "UPDATE planet_user pu \
+                                INNER JOIN  planet p ON  p.planet_id = pu.planet_id \
+                             SET pu.energy = p.initial_energy \
+                             WHERE pu.user_id = ? AND completed = 0";
+                                
+        con.query(del_log, [self.user_id], function (err_del_log) {
+            if(err_del_log) throw err_del_log;
+            
+            con.query(del_robots, [self.user_id], function (err_del_robots) {
+                if(err_del_robots) throw err_del_robots;
+                
+                con.query(del_owned_items, [self.user_id], function (err_del_owned_items) {
+                    if(err_del_owned_items) throw err_del_owned_items;
+                    
+                    con.query(insert_init_items, [self.user_id], function (err_insert_items) {
+                        if(err_insert_items) throw err_insert_items;
+                        
+                        con.query(update_energy, [self.user_id], function (err_update_energy) {
+                            if(err_update_energy) throw err_update_energy;
+                            
+                            callback(null, true);
+                        });
+                        
+                    });
+                });
+                
+            });
+            
+        });
+    }
     
     
     

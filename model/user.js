@@ -15,10 +15,8 @@ class User {
         var sql = "SELECT 1 FROM user WHERE username = ? AND password = ?";
         var valid = false;
         con.query(sql, [this.username, md5(this.password)], function (err, result) {
-            if (err) {
-                throw err;
-                return;
-            }
+            if (err) throw err;
+                
             
             if(result.length == 1) 
                 callback(null, true);
@@ -31,11 +29,8 @@ class User {
     isUsernameAvailable(callback) {
         var sql = "SELECT 1 FROM user WHERE username = ?";
         con.query(sql, [this.username], function (err, result) {
-            if (err) { 
-                throw err;
-                return;
-            }
-            
+            if (err) throw err;
+                            
             if(result.length == 0) 
                 callback(null, true);
             else
@@ -53,10 +48,8 @@ class User {
             if(available) {
                 var sql = "INSERT INTO user (username, password) VALUES (?,?)";
                 con.query(sql, [self.username, md5(self.password)], function (err, result) {
-                    if (err) {
-                        throw err;
-                        return;
-                    }
+                    if (err) throw err;
+                        
                     
                     // Assign a planet of difficulty 1 to the new user
                     var planet_user = new PlanetUser(result.insertId);

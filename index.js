@@ -73,7 +73,7 @@ app.get('/home',function(req,res){
   }
 });
 
-// Open the server at port 3000
-app.listen(3000);
+// Open the server at port 8080
+app.listen(8080);
 
-console.log("Running at Port 3000");
+console.log("Running at Port 8080");

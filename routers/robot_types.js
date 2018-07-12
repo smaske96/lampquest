@@ -40,7 +40,7 @@ router.get('/robot_type/addRobot', function(req, res) {
                 res.redirect('/home')
             }
             else {
-                res.redirect('/user/signout')
+                res.redirect('/home#!/factory')
             }
         })
         

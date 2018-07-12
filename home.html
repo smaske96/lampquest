@@ -38,19 +38,6 @@
         <div class="row">
             <!-- Main Content -->
             <div class="col-sm-8 cell" ng-view>
-                <!--
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    <h4 class="alert-heading">Hi {{username}}! </h4>
-                    <p>Welcome to the planet {{planet_name}}! Build robots in your planet to terraform the planet. The items required to complete your mission is shown on the right.</p>
-                    <hr>
-                    <p class="mb-0">Good Luck and use your resources wisely!</p>
-                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                -->
-                
-                
             </div>
             <!-- Side Contents-->
             <div class="col-sm-4 cell">
@@ -60,6 +47,7 @@
                         <span width="50%" class="float-sm-right">Experience: {{experience}}</span>
                     </div>
                     <div class="card-body text-center" ng-controller="userParameters">
+                        <div class="w-100 text-right"><a href="#" class="badge badge-danger" data-toggle="modal" data-target="#confirmRevert">Revert All</a></div>
                         <h4 class="card-title">Planet {{planet_name}}</h4>
                         <img src="img/planet/{{planet_image}}" alt="{{planet_name}}" class="img-thumbnail" width="300px">
                     </div>
@@ -91,6 +79,28 @@
             </div>
         </div>
     </div>
+    
+    <!-- Modal Confirm Revert All Start -->
+    <div class="modal fade" tabindex="-1" role="dialog" id="confirmRevert">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Revert All Changes</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>All the progress in the planet will be reverted. </p>
+            </div>
+            <div class="modal-footer">
+                <a href='/planet_user/reset' class="btn btn-danger">Confirm Revert</a>
+                <a href='#' class="btn btn-secondary" data-dismiss="modal">Cancel</a>
+            </div>
+            </div>
+        </div>
+    </div>
+    <!-- Modal Confirm Revert All End -->
     
     <!-- Optional JavaScript -->
     <!-- jQuery first, then Popper.js, then Bootstrap JS -->

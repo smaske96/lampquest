@@ -85,14 +85,28 @@ router.get('/planet_user/check_if_completed', function(req, res) {
     var user = new User(req.session.uname, req.session.pword);
     
     user.getParameters(function(err_user, user_response) {
-        if (err_user) {
-            throw err_user;
-            return;
-        }
+        if (err_user) throw err_user;
+            
         
         var planet_user = new PlanetUser(user_response.user_id);
         planet_user.checkIfCompleted(function(err, result) {
             res.send(result);
+        });
+    });
+});
+
+// Reset the planet to original state.
+router.get('/planet_user/reset', function(req,res) {
+    var user = new User(req.session.uname, req.session.pword);
+    
+    user.getParameters(function(err_user, user_response) {
+        if(err_user) throw err_user;
+        
+        var planet_user = new PlanetUser(user_response.user_id);
+        planet_user.resetPlanet(function(err, result) {
+            if(result) {
+                res.redirect('/home');
+            }
         });
     });
 });
