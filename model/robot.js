@@ -174,7 +174,14 @@ class Robot {
                                             WHERE \
                                                 robot_id = ?";
                             con.query(insert, [self.robot_id], function(err_insert) {
-                                if (err_insert) callback(err_insert);
+                                if (err_insert) throw err_insert;
+                                callback(null, true);
+                            });
+                        }
+                        else {
+                            //If robot cannot build, turn off enabled flag.
+                            self.toggleEnabled(function(err_repeat, result_repeat){
+                                callback(null, false);
                             });
                         }
                     });
@@ -434,8 +441,6 @@ class Robot {
             }
         });
     }
-    
-    
 }
 
 module.exports = Robot;

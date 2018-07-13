@@ -85,7 +85,10 @@ router.get('/robot_type/robot/toggleEnabled', function(req,res){
     robot.toggleEnabled(function(err, result) {
         if(err) throw err;
         
-        if(result) res.send(true);
+        if(result) 
+            res.send(result);
+        else 
+            res.redirect('/home');
     });
 });
 
