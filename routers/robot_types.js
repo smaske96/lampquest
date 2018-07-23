@@ -82,13 +82,11 @@ router.get('/robot_type/robot/fetchAll', function(req,res) {
 
 router.get('/robot_type/robot/toggleEnabled', function(req,res){   
     var robot = new Robot(req.query.robot_id);
-    robot.toggleEnabled(function(err, result) {
+    robot.toggleEnabled(undefined, function(err, result) { // undefined means just change the enabled flag 0 -> 1 or 1 -> 0
         if(err) throw err;
+        console.log(result);
+        res.send(result);
         
-        if(result) 
-            res.send(result);
-        else 
-            res.redirect('/home');
     });
 });
 

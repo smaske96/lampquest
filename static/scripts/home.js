@@ -80,21 +80,28 @@ mainApp.controller('ownedItems', function($scope, $http, $interval) {
 });
 
 
-mainApp.controller('ownedRobots', function($scope, $http) {
+mainApp.controller('ownedRobots', function($scope, $http, $window) {
     $http.get('/robot_type/robot/fetchAll').then(function(res) {
         $scope.owned_robots = res.data;
         $scope.toggleEnabled = function (robot_id) {
-            $http.get('/robot_type/robot/toggleEnabled', {params:{"robot_id":robot_id}});
+            $http.get('/robot_type/robot/toggleEnabled', {params:{"robot_id":robot_id}}).then(function(res_toggle){
+               if(!res_toggle.data) { //If response was false
+                   $window.location.href = '/home'; //Redirect to home
+               } 
+            });
         }
     });
     
 });
 
-mainApp.controller('complete', function($http, $interval) {
+mainApp.controller('complete', function($http, $interval, $window) {
     var check = function() {
         $http.get('/planet_user/check_if_completed').then(function(res) {
-            if(res.data) { //If planet quest is completed, show the modal saying level is completed. 
+            if(res.data.completed) { //If planet quest is completed, show the modal saying level is completed. 
                 $('#modal_level_complete').modal('show');
+            }
+            else if(res.data.all_completed) { // If all planets are completed, redirect to end page.
+                $window.location.href = '/completed';
             }
         });
     }

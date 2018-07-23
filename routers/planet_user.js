@@ -89,8 +89,17 @@ router.get('/planet_user/check_if_completed', function(req, res) {
             
         
         var planet_user = new PlanetUser(user_response.user_id);
-        planet_user.checkIfCompleted(function(err, result) {
-            res.send(result);
+        planet_user.checkIfCompleted(function(err, result, all_completed) {
+            if(err) throw err;
+            if(all_completed) {
+                res.send({'all_completed':true});
+            }
+            else if(result){
+                res.send({'completed':true});
+            }
+            else {
+                res.send({'completed':false});
+            }
         });
     });
 });
@@ -105,6 +114,7 @@ router.get('/planet_user/reset', function(req,res) {
         var planet_user = new PlanetUser(user_response.user_id);
         planet_user.resetPlanet(function(err, result) {
             if(result) {
+                console.log("Redirect Revert");
                 res.redirect('/home');
             }
         });

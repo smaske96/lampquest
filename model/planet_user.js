@@ -44,8 +44,9 @@ class PlanetUser {
         });
     }
     
-    // Return the callabck function with planet user parameters 
+    // Return the callback function with planet user parameters 
     getParameters(callback) {
+        var self = this;
         // If both planet id and user id are available, extract data for the particular planet and user
         if(this.user_id && this.planet_id) {
             var sql = "SELECT planet_user_id, planet_name, planet_image, difficulty_level \
@@ -63,7 +64,46 @@ class PlanetUser {
                         WHERE user_id = ? AND completed = 0";           
             con.query(sql, [this.user_id], function (err, result) {
                 if (err) throw err;
-                callback(null, result[0]);
+                if(result.length == 0) {
+                    // No active planet found. 
+                    // Check if there is new planet is available 
+                    var check_new = "SELECT MIN(difficulty_level) AS difficulty \
+                                     FROM planet \
+                                     WHERE planet_id NOT IN ( \
+                                            SELECT planet_id \
+                                            FROM planet_user \
+                                            WHERE user_id = ? AND completed = 1\
+                                     )";
+                    con.query(check_new, [self.user_id], function(err_new, result_new) {
+                        if(err_new) throw err_new;
+                        if(result_new.length == 0) {
+                            // No new planet found
+                            callback(null, null);
+                        }
+                        else {
+                            self.addNewPlanet(result_new.difficulty, function(err_add, result_add) {
+                                if (err_add) throw err_add;
+                                
+                                if(result_add) {
+                                    // If new planet is successfully added, call getParameters again. 
+                                    self.getParameters(callback);
+                                }
+                                else {
+                                    // If new planet not added
+                                    callback(null, null);
+                                }
+                                
+                            });
+                        }
+                    });                 
+                    
+                    
+                    
+                    
+                }
+                else {
+                    callback(null, result[0]);
+                }
             });
         } 
     }
@@ -76,7 +116,10 @@ class PlanetUser {
                         WHERE user_id = ? AND completed = 0";           
             con.query(sql, [this.user_id], function (err, result) {
                 if (err) throw err;
-                callback(null, result[0].energy);
+                if(result.length == 0) 
+                    callback(null, null);
+                else 
+                    callback(null, result[0].energy);
             });
         } 
     }
@@ -210,12 +253,20 @@ class PlanetUser {
             if(err) 
                 throw err;
             else if(result.length > 0) { //Planet is not completed yet.
-                callback(self, false);
+                callback(null, false);
             }
             else {
                 // Fetch current difficulty level to add new planet
                 self.getParameters(function(err_params, result_params) {
                     if(err_params) throw err_params;
+                    
+                    
+                    if(!result_params) { 
+                        // There is no current planet. All planets are completed. 
+                        // All planets are completed. No planet remaining.
+                        callback(null, false, true);
+                        return;
+                    }
                     
                     var difficulty = result_params.difficulty_level;
                     
@@ -243,19 +294,10 @@ class PlanetUser {
                             }
                             else {
                                 //No new planet were inserted 
-                                // Revert the completed flag in planet_user table and return false result 
+                                // Set all completed flag in callback function
                                 
-                                /**
-                                var revert = "UPDATE planet_user pu \
-                                                    INNER JOIN planet p ON p.planet_id = pu.planet_id \
-                                              SET pu.completed = 0 WHERE pu.user_id = ? AND p.difficulty_level = ?";
-                                con.query(revert, [self.user_id, difficulty], function(err_revert) {
-                                    if(err_revert) throw err_revert;
-                                    
-                                    callback(null, false);
-                                });
-                                **/
-                                callback(null, false);
+                               
+                                callback(null, false, true);
                             }
                             
                             

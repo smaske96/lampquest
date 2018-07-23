@@ -71,6 +71,19 @@ app.get('/home',function(req,res){
   }
 });
 
+
+// Defines action for the home page of the application (the main page for the game).
+app.get('/completed',function(req,res){
+   //If user session is not present, render index.html
+   if(!req.session.uname || !req.session.pword) {  
+        res.sendFile(path.join(__dirname+'/index.html'));
+  } 
+  else {  
+    //If user session is present, render home.html
+    res.sendFile(path.join(__dirname+'/end.html'));
+  }
+});
+
 // Open the server at port 8080
 app.listen(8080);
 

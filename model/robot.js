@@ -139,16 +139,17 @@ class Robot {
     }
     
     // Sets or unset the enabled flag for the robot depending on previous value.
-    toggleEnabled(callback) {
+    toggleEnabled(value, callback) {
         var self = this;
+        console.log(value);
         
         // Fetch current enabled value
         var sql = "SELECT enabled FROM robot WHERE robot_id = ?";
         con.query(sql, [self.robot_id], function(err, result) {
             var update = "UPDATE robot SET enabled = ? WHERE robot_id = ?";
             
-            //Get new enabled value (opposite of previous) and update it
-            var new_enabled = result[0].enabled == 0 ? 1 : 0;
+            //Get new enabled value (opposite of previous) and update it. If value is given set new_enabled as the value 
+            var new_enabled = value === undefined ? (result[0].enabled == 0 ? 1 : 0) : value;
             con.query(update,[new_enabled, self.robot_id], function(err_update) {
                if (err_update) throw err_update;
                
@@ -156,7 +157,8 @@ class Robot {
                if(new_enabled == 0) {
                     var del = "DELETE FROM item_robot WHERE robot_id = ? AND build_end_time IS NULL";
                     con.query(del, [self.robot_id], function(err_delete) {
-                        if (err_delete) callback(err_delete);
+                        if (err_delete) throw err_delete;
+                        callback(null, true);
                     });
                }
                // If enabled is turn on, insert new record in item_robot with start_time as current timestamp if the robot can produce
@@ -180,7 +182,8 @@ class Robot {
                         }
                         else {
                             //If robot cannot build, turn off enabled flag.
-                            self.toggleEnabled(function(err_repeat, result_repeat){
+                            self.toggleEnabled(0, function(err_repeat, result_repeat){
+                                if(err_repeat) throw err_repeat;
                                 callback(null, false);
                             });
                         }
@@ -293,7 +296,7 @@ class Robot {
         });
     }
     
-    
+    // Produce item(s) once if the robot can produce item depending on the production start time and time required for production
     produceItem(self, start_time, time_required, callback) {
         var robot_id = self.robot_id;
         
@@ -302,15 +305,16 @@ class Robot {
         console.log("time req: " + time_required);
         console.log("Current time: " + currTime.format());
         
-        // If the production time ( = start_time + time_required) is greater than current time, then cannot produce
-        if(currTime.isBefore(moment(start_time).add(time_required,'seconds'))) {
-            callback(null, false);
-        }
-        else {
-            // If time is valid, then check if robot can produce or not
-            self.canBuild(self, function(err, can_build) {
-                if(err) throw err;
-                if(can_build) {
+        // Check if robot can build items 
+        self.canBuild(self, function(err, can_build) {
+            if(err) throw err;
+            if(can_build) {
+                // If the production time ( = start_time + time_required) is greater than current time, then cannot produce
+                if(currTime.isBefore(moment(start_time).add(time_required,'seconds'))) {
+                    callback(null, false);
+                }
+                else {
+                    
                     //If robot can produce, proceed with the item production 
                     // Add item to owned (insert only, no update)
                     var sql_insert_item = "INSERT INTO planet_user_item (planet_user_id, item_id, owned_qty) \
@@ -405,12 +409,15 @@ class Robot {
     
                     });
                 }
-                else {
-                    //If cannot build, callback false.
+            }
+            else {
+                //If robot cannot build, turn off enabled flag.
+                self.toggleEnabled(0,function(err_repeat, result_repeat){
+                    if (err_repeat) throw err_repeat;
                     callback(null, false);
-                }
-            });
-        }
+                });
+            }
+        });
     }
     
     

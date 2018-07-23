@@ -116,7 +116,7 @@ router.get('/user/parameters', function(req, res) {
             res.send(response);
         }
         else { //If not valid user
-            res.redirect('/');
+            throw {name:"Invalid User Session", message:"Username or Password in the session is invalid"}
         }
     });
 });
