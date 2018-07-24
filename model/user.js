@@ -12,9 +12,10 @@ class User {
 
     // Check if the username is valid or not
     isValid(callback) {
+        var self = this;
+        
         var sql = "SELECT 1 FROM user WHERE username = ? AND password = ?";
-        var valid = false;
-        con.query(sql, [this.username, md5(this.password)], function (err, result) {
+        con.query(sql, [self.username, md5(self.password)], function (err, result) {
             if (err) throw err;
                 
             
@@ -27,8 +28,10 @@ class User {
     
     // Check is a username if available or not
     isUsernameAvailable(callback) {
+        var self = this;
+        
         var sql = "SELECT 1 FROM user WHERE username = ?";
-        con.query(sql, [this.username], function (err, result) {
+        con.query(sql, [self.username], function (err, result) {
             if (err) throw err;
                             
             if(result.length == 0) 
@@ -44,7 +47,8 @@ class User {
         var self = this;
         
         // Check if given username is available.
-        this.isUsernameAvailable(function(err, available) {
+        self.isUsernameAvailable(function(err, available) {
+            if (err) throw err;
             if(available) {
                 var sql = "INSERT INTO user (username, password) VALUES (?,?)";
                 con.query(sql, [self.username, md5(self.password)], function (err, result) {
@@ -56,8 +60,7 @@ class User {
                     
                     planet_user.addNewPlanet(1, function(err_planet, result_planet) {
                         if (err_planet) {
-                            throw error_planet;
-                            return;
+                            throw err_planet;
                         }
                         callback(null,true);
                     });
@@ -74,14 +77,13 @@ class User {
     getParameters(callback) {
         var self = this;
         // First check if user is valid 
-        this.isValid(function (err, valid) {
+        self.isValid(function (err, valid) {
             if (err) throw err;
             if(valid) {
                 var sql = "SELECT user_id, username, experience FROM user WHERE username = ? AND password = ?";
                 con.query(sql, [self.username, md5(self.password)], function (err, result) {
                     if (err) {
                         throw err;
-                        return;
                     }
                     
                     if(result.length == 1) 

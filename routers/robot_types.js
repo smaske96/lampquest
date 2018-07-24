@@ -14,6 +14,7 @@ router.get('/robot_type/fetch_all',function(req,res){
         var results = [];
         var all_robot_types = new RobotType();
         all_robot_types.fetchAllRobotTypeIds(function(err, ids) {
+            if(err) throw err;
             ids.forEach(function(robot_type_id) {
                 var robot_type = new RobotType(robot_type_id);
                 robot_type.getParameters(function(err_param, parameters) {
@@ -37,12 +38,12 @@ router.get('/robot_type/addRobot', function(req, res) {
             if(err) throw err;
             
             if(result) {
-                res.redirect('/home')
+                res.redirect('/home');
             }
             else {
-                res.redirect('/home#!/factory')
+                res.redirect('/home#!/factory');
             }
-        })
+        });
         
     });
 });
@@ -58,6 +59,7 @@ router.get('/robot_type/robot/fetchAll', function(req,res) {
         var count = 0;
         var user_robots = new Robot();
         user_robots.fetchAllRobotIds(user_response.user_id, function(err, ids) {
+            if(err) throw err;
             ids.forEach(function(robot_id) {
                 var robot = new Robot(robot_id);
                 robot.getParameters(function(err_param, parameters) {
@@ -84,10 +86,9 @@ router.get('/robot_type/robot/toggleEnabled', function(req,res){
     var robot = new Robot(req.query.robot_id);
     robot.toggleEnabled(undefined, function(err, result) { // undefined means just change the enabled flag 0 -> 1 or 1 -> 0
         if(err) throw err;
-        console.log(result);
         res.send(result);
         
     });
 });
 
-module.exports = router
+module.exports = router;

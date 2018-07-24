@@ -10,12 +10,14 @@ class PlanetUser {
     
     // Adds new planet to the user with given difficulty.
     addNewPlanet(difficulty, callback) {
+        var self = this;
+        
         var sql = "INSERT INTO planet_user (planet_id, user_id, energy) \
                         SELECT planet_id, ?, initial_energy \
                         FROM planet \
                         WHERE difficulty_level = ? \
                         LIMIT 1";
-        con.query(sql, [this.user_id, difficulty], function (err, result) {
+        con.query(sql, [self.user_id, difficulty], function (err, result) {
             if (err) throw err;
                
             
@@ -32,10 +34,8 @@ class PlanetUser {
                 
                 // insertId of result is the auto_increment number (i.e. user_id) inserted by the first query.
                 con.query(sql_1, [result.insertId], function (err_1) {
-                    if(err_1) {
-                        throw err_1;
-                        return;
-                    }
+                    if(err_1) throw err_1;
+                       
                     
                     callback(null, true);
                     
@@ -47,22 +47,23 @@ class PlanetUser {
     // Return the callback function with planet user parameters 
     getParameters(callback) {
         var self = this;
+        
         // If both planet id and user id are available, extract data for the particular planet and user
-        if(this.user_id && this.planet_id) {
+        if(self.user_id && self.planet_id) {
             var sql = "SELECT planet_user_id, planet_name, planet_image, difficulty_level \
                         FROM planet_user NATURAL JOIN planet \
                         WHERE user_id = ? AND planet_id = ?";
-            con.query(sql, [this.user_id, this.planet_id], function (err, result) {
+            con.query(sql, [self.user_id, self.planet_id], function (err, result) {
                 if (err) throw err;
                 callback(null, result[0]);
             });
         }
         // If only user id is available, the extract data for the active planet (i.e. completed = 0)
-        else if(this.user_id) {
+        else if(self.user_id) {
             var sql = "SELECT planet_user_id, planet_name, planet_image, difficulty_level \
                         FROM planet_user NATURAL JOIN planet \
                         WHERE user_id = ? AND completed = 0";           
-            con.query(sql, [this.user_id], function (err, result) {
+            con.query(sql, [self.user_id], function (err, result) {
                 if (err) throw err;
                 if(result.length == 0) {
                     // No active planet found. 
@@ -110,11 +111,13 @@ class PlanetUser {
     
     // Returns the callback function with available energy in the active planet.
     getAvaliableEnergy(callback) {
-        if(this.user_id) {
+        var self = this;
+        
+        if(self.user_id) {
             var sql = "SELECT energy \
                         FROM planet_user NATURAL JOIN planet \
                         WHERE user_id = ? AND completed = 0";           
-            con.query(sql, [this.user_id], function (err, result) {
+            con.query(sql, [self.user_id], function (err, result) {
                 if (err) throw err;
                 if(result.length == 0) 
                     callback(null, null);
@@ -126,11 +129,13 @@ class PlanetUser {
     
     // Returns the required goals for the current planet
     getGoals(callback) {
-        if(this.user_id) {
+        var self = this;
+        
+        if(self.user_id) {
             var sql = "SELECT item_name, item_image, required_qty \
                         FROM planet_item_goal NATURAL JOIN planet_user NATURAL JOIN item \
                         WHERE user_id = ? AND completed = 0";
-            con.query(sql, [this.user_id], function (err, result) {
+            con.query(sql, [self.user_id], function (err, result) {
                 if (err) throw err;
                 
                 callback(null, result);
@@ -140,14 +145,16 @@ class PlanetUser {
     
     // Returns the owned item with their quantities in the active planet 
     getOwnedItems(callback) {
-        if(this.user_id) {
+        var self = this;
+        
+        if(self.user_id) {
             // planet_user_item may contain multiple entires for same item, so the owned quantity is aggregated 
             var sql = "SELECT item_id, MAX(item_name) item_name, MAX(item_image) item_image, SUM(owned_qty) owned_qty \
                         FROM planet_user_item NATURAL JOIN planet_user NATURAL JOIN item \
                         WHERE user_id = ? AND completed = 0\
                         GROUP BY item_id \
                         HAVING SUM(owned_qty) > 0";
-            con.query(sql, [this.user_id], function (err, result) {
+            con.query(sql, [self.user_id], function (err, result) {
                 if (err) throw err;
                 
                 callback(null, result);
@@ -157,7 +164,9 @@ class PlanetUser {
     
     // Returns the list of enabled robot ids in the planet 
     getEnabledRobots(callback) {
-        if(this.user_id) {
+        var self = this;
+        
+        if(self.user_id) {
             var sql = "SELECT DISTINCT robot_id \
                         FROM robot NATURAL JOIN planet_user NATURAL LEFT JOIN ( \
                             SELECT * \
@@ -167,7 +176,7 @@ class PlanetUser {
                         WHERE user_id = ? AND completed = 0 \
                             AND enabled = 1 \
                         ORDER BY build_start_time";
-            con.query(sql, [this.user_id], function (err, result) {
+            con.query(sql, [self.user_id], function (err, result) {
                 if (err) throw err;
                 
                 callback(null, result);
@@ -187,7 +196,7 @@ class PlanetUser {
         var produce = function(robot_id, callback) {
             var robot = new Robot(robot_id);
             robot.startProduction(callback);
-        }
+        };
         
         // Produce from multiple robots sequentially
         var produce_multiple = function(robot_ids, process) {
@@ -196,10 +205,8 @@ class PlanetUser {
             function next() {
                 if(i < robot_ids.length) {
                     process(robot_ids[i++].robot_id, function(err_produce, result_produce, repeat){
-                        if(err_produce) {
-                            throw err_produce;
-                            return;
-                        }
+                        if(err_produce) throw err_produce;
+                           
                         console.log(robot_ids[i-1].robot_id);
                         // repeat flag is set if the robot can again produce items.
                         if(repeat) self.catchup_required = true;
@@ -217,14 +224,12 @@ class PlanetUser {
             }
             
             next();
-        }
+        };
         
-        this.getEnabledRobots(function(err, result) {
+        self.getEnabledRobots(function(err, result) {
             if(err) throw err;
             
-            
             produce_multiple(result, produce);
-            
             
         });
     }

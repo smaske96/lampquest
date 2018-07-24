@@ -11,8 +11,12 @@ class Robot {
     
     // Get robot type (combiner/diffusor)
     getType(callback) {
+        var self = this;
+        
         var sql = "SELECT robot_type_id FROM robot WHERE robot_id = ?";
-        con.query(sql, [this.robot_id], function (err, result) {
+        con.query(sql, [self.robot_id], function (err, result) {
+            if (err) throw err;
+            
             var robot_type = new RobotType(result[0].robot_type_id);
             
             robot_type.getType(function(err_type, type) {
@@ -26,10 +30,12 @@ class Robot {
 
     // Get robot parameters with the type parameters
     getParameters(callback) {
+        var self = this;
+        
         var sql = "SELECT robot_id, robot_name, robot_type_id, enabled \
                     FROM robot \
                     WHERE robot_id = ?";
-        con.query(sql, [this.robot_id], function (err, result) {
+        con.query(sql, [self.robot_id], function (err, result) {
             if (err) throw callback(err, null);
             
             var robot_type = new RobotType(result[0].robot_type_id);
@@ -51,7 +57,7 @@ class Robot {
                     WHERE user_id = ? AND completed = 0";
                     
         con.query(sql, [user_id], function (err, result) {
-            if (err) callback(err, null);
+            if (err) throw err;
             
             var ids = [];
             result.forEach(function(item) {
@@ -87,6 +93,8 @@ class Robot {
     
     //Add new robot to the user in active planet
     addNewRobot(robot_type_id, user_id, callback){ 
+        var self = this;
+        
         //Randomly generate a robot name. (Two uppercase characters followed by a random integer < 100)
         function getRandomRobotName(){
             var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -100,7 +108,7 @@ class Robot {
         }
         
         // First check if initial energy cost is met 
-        this.checkEnergyCost(user_id, robot_type_id, function (err, valid) {
+        self.checkEnergyCost(user_id, robot_type_id, function (err, valid) {
             if (err) throw err;
             
             if(valid) {
@@ -141,11 +149,12 @@ class Robot {
     // Sets or unset the enabled flag for the robot depending on previous value.
     toggleEnabled(value, callback) {
         var self = this;
-        console.log(value);
         
         // Fetch current enabled value
         var sql = "SELECT enabled FROM robot WHERE robot_id = ?";
         con.query(sql, [self.robot_id], function(err, result) {
+            if(err) throw err;
+            
             var update = "UPDATE robot SET enabled = ? WHERE robot_id = ?";
             
             //Get new enabled value (opposite of previous) and update it. If value is given set new_enabled as the value 
@@ -219,7 +228,7 @@ class Robot {
         
         
         con.query(sql_check_qty, [robot_id], function (err, result) {
-            if(err) callback(err, null);
+            if(err) throw err;
             
             if(result.length == 0) { //If there are no items at all, then robot cannot produce
                 callback(null, false);
@@ -362,6 +371,7 @@ class Robot {
                     
                     // Insert item into planet_user_item
                     self.getParameters(function(err, params) {
+                        if(err) throw err;
                         con.query(sql_insert_item, [robot_id, params.type.qty_produced], function(err_insert, result_insert) {
                             if(err_insert) throw err_insert;
                             
@@ -428,7 +438,7 @@ class Robot {
                     FROM item_robot NATURAL RIGHT JOIN robot NATURAL RIGHT JOIN robot_type\
                     WHERE robot_id = ? AND enabled = 1 AND build_end_time IS NULL";
                     
-        con.query(sql, [this.robot_id], function(err, result) {
+        con.query(sql, [self.robot_id], function(err, result) {
             if(err) {
                 throw err;
             }

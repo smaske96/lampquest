@@ -75,6 +75,7 @@ router.get('/planet_user/update_production', function(req, res) {
         
         var planet_user = new PlanetUser(user_response.user_id);
         planet_user.updateProduction(true, function(err, result) {
+            if (err) throw err;
             res.send(result);
         });
     });
@@ -113,6 +114,7 @@ router.get('/planet_user/reset', function(req,res) {
         
         var planet_user = new PlanetUser(user_response.user_id);
         planet_user.resetPlanet(function(err, result) {
+            if(err) throw err;
             if(result) {
                 console.log("Redirect Revert");
                 res.redirect('/home');

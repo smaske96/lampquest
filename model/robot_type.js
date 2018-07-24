@@ -7,6 +7,8 @@ class RobotType {
     
     //Returns if the robot_type is a combiner or diffusor 
     getType(callback) {
+        var self = this;
+        
         var sql = "SELECT \
                           combiner_id IS NOT NULL AS is_combiner, \
                           diffusor_id IS NOT NULL AS is_diffusor \
@@ -15,8 +17,8 @@ class RobotType {
                         LEFT JOIN diffusor ON robot_type_id = diffusor_id \
                     WHERE robot_type_id = ?";
             
-        con.query(sql, [this.robot_type_id], function (err, result) {
-            if (err) throw callback(err, null);
+        con.query(sql, [self.robot_type_id], function (err, result) {
+            if (err) throw err;
             
             if(result.length != 1) {
                 callback({name: "Database value error", message:"No robot type found!"},null);
@@ -52,9 +54,11 @@ class RobotType {
     }
     **/
     getParameters(callback) {
-        var type_id = this.robot_type_id;
+        var self = this;
         
-        this.getType(function(err, type) {
+        var type_id = self.robot_type_id;
+        
+        self.getType(function(err, type) {
             if(err) throw err;
             if(type == "combiner") {
                 var sql = "SELECT \
@@ -78,6 +82,8 @@ class RobotType {
                            WHERE robot_type_id = ?";
                            
                 con.query(sql, [type_id], function (err, records) {
+                    if (err) throw err;
+                    
                     var result = {};
                     result.robot_type_id = records[0].robot_type_id;
                     result.robot_type = records[0].robot_type_name;
@@ -126,11 +132,12 @@ class RobotType {
                            WHERE robot_type_id = ?";
 
                 con.query(sql, [type_id], function (err, records) {
+                    if(err) throw err;
                     var result = {};
                     result.robot_type_id = records[0].robot_type_id;
                     result.robot_type   = records[0].robot_type_name;
                     result.image        = records[0].robot_type_image;
-                    result.time_req     = records[0].time_required
+                    result.time_req     = records[0].time_required;
                     result.energy_limit = records[0].energy_limit;
                     result.energy       = records[0].energy_released;
                     result.cost       = records[0].initial_energy_cost;
@@ -163,7 +170,7 @@ class RobotType {
     fetchAllRobotTypeIds(callback){
         var sql = "SELECT robot_type_id FROM robot_type";
         con.query(sql, [], function (err, result) {
-            if(err) callback(err, null);
+            if(err) throw err;
             
             var ids = [];
             result.forEach(function(item) {

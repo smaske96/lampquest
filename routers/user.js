@@ -83,7 +83,7 @@ router.post('/user/addnew', function(req,res) {
         if(err) throw err;
         
         if(!available) {
-            res.sendFile(path.join(__dirname+'/../index.html'));
+            res.redirect('/');
         }
         
         user.addUser(function(err, success) {
@@ -116,10 +116,10 @@ router.get('/user/parameters', function(req, res) {
             res.send(response);
         }
         else { //If not valid user
-            throw {name:"Invalid User Session", message:"Username or Password in the session is invalid"}
+            throw {name:"Invalid User Session", message:"Username or Password in the session is invalid"};
         }
     });
 });
 
 
-module.exports = router
+module.exports = router;
