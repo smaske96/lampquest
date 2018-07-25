@@ -36,7 +36,7 @@ class Robot {
                     FROM robot \
                     WHERE robot_id = ?";
         con.query(sql, [self.robot_id], function (err, result) {
-            if (err) throw callback(err, null);
+            if (err) throw err;
             
             var robot_type = new RobotType(result[0].robot_type_id);
             //Fetch robot type parameters
@@ -79,7 +79,7 @@ class Robot {
                     FROM planet_user CROSS JOIN robot_type \
                     WHERE user_id = ? AND completed = 0 AND robot_type_id = ?";
         con.query(sql, [user_id, robot_type_id], function (err, result) {
-             if (err) throw callback(err, null);
+             if (err) throw err;
              if(result[0].energy_cost > result[0].energy_available) {
                 callback(null, false);
              }
@@ -161,7 +161,6 @@ class Robot {
             var new_enabled = value === undefined ? (result[0].enabled == 0 ? 1 : 0) : value;
             con.query(update,[new_enabled, self.robot_id], function(err_update) {
                if (err_update) throw err_update;
-               
                // If enabled is turned off, delete the active record in item_robot
                if(new_enabled == 0) {
                     var del = "DELETE FROM item_robot WHERE robot_id = ? AND build_end_time IS NULL";
@@ -173,9 +172,9 @@ class Robot {
                // If enabled is turn on, insert new record in item_robot with start_time as current timestamp if the robot can produce
                else {
                     self.canBuild(self, function(err_build, can_build) {
-                        if(err_build)
-                            throw err_build;
-                        else if(can_build) {
+                        if(err_build) throw err_build;
+                        
+                        if(can_build) {
                             var insert = "INSERT INTO item_robot (item_id, robot_id) \
                                             SELECT COALESCE(d.produce_item_id, c.produce_item_id) item_id,  robot_id\
                                             FROM robot_type rt \
@@ -193,6 +192,7 @@ class Robot {
                             //If robot cannot build, turn off enabled flag.
                             self.toggleEnabled(0, function(err_repeat, result_repeat){
                                 if(err_repeat) throw err_repeat;
+                                
                                 callback(null, false);
                             });
                         }
@@ -268,7 +268,7 @@ class Robot {
                                         
                                         if(result_energy.length != 1) {
                                             console.log("Combiner " + robot_id + " requires more energy");
-                                            callback(null, false)
+                                            callback(null, false);
                                         }
                                         else {
                                             callback(null, true);
@@ -279,14 +279,18 @@ class Robot {
                                     //If diffusor, check if energy limit is reached
                                     var sql_check_energy = "SELECT r.robot_id \
                                                             FROM robot r \
-                                                                INNER JOIN item_robot ir ON r.robot_id = ir.robot_id \
-                                                                INNER JOIN diffusor d ON r.robot_type_id = d.diffusor_id AND d.consume_item_id = ir.item_id \
+                                                                INNER JOIN ( \
+                                                                    SELECT DISTINCT robot_id, build_start_time \
+                                                                    FROM item_robot \
+                                                                    WHERE build_end_time IS NOT NULL \
+                                                                ) ir ON r.robot_id = ir.robot_id \
+                                                                INNER JOIN diffusor d ON r.robot_type_id = d.diffusor_id \
                                                             WHERE \
                                                                 r.robot_id = ? \
                                                             GROUP BY r.robot_id \
-                                                            HAVING SUM(d.energy_released) > MIN(energy_limit)";
+                                                            HAVING SUM(d.energy_released) >= MIN(energy_limit)";
                                     con.query(sql_check_energy, [robot_id], function (err_energy, result_energy) {
-                                        if(err_energy) callback(err_energy);
+                                        if(err_energy) throw err_energy;
                                         
                                         if(result_energy.length == 0) {
                                             callback(null, true);

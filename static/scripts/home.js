@@ -41,7 +41,7 @@ mainApp.controller('planetParameters',function($scope, $http, $interval) {
         $http.get('/planet_user/getEnergy').then(function(res) {
             $scope.energy = res.data.energy;
         });
-    }
+    };
     
     updateEnergy(); // To update at start
     $interval(updateEnergy, 1000); // To update after every 1 sec
@@ -73,7 +73,7 @@ mainApp.controller('ownedItems', function($scope, $http, $interval) {
                 $scope.owned = res.data;
             });
         });
-    }
+    };
     
     updateOwnedItems(); // To update at start
     $interval(updateOwnedItems, 2000); // To update every 2 sec
@@ -89,7 +89,7 @@ mainApp.controller('ownedRobots', function($scope, $http, $window) {
                    $window.location.href = '/home'; //Redirect to home
                } 
             });
-        }
+        };
     });
     
 });
@@ -104,7 +104,7 @@ mainApp.controller('complete', function($http, $interval, $window) {
                 $window.location.href = '/completed';
             }
         });
-    }
+    };
     
     check();
     $interval(check, 1000); //Periodically check every second if the planet quest is completed.

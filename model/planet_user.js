@@ -207,7 +207,6 @@ class PlanetUser {
                     process(robot_ids[i++].robot_id, function(err_produce, result_produce, repeat){
                         if(err_produce) throw err_produce;
                            
-                        console.log(robot_ids[i-1].robot_id);
                         // repeat flag is set if the robot can again produce items.
                         if(repeat) self.catchup_required = true;
                         next();
