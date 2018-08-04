@@ -82,9 +82,8 @@ class PlanetUser {
                             callback(null, null);
                         }
                         else {
-                            self.addNewPlanet(result_new.difficulty, function(err_add, result_add) {
+                            self.addNewPlanet(result_new[0].difficulty, function(err_add, result_add) {
                                 if (err_add) throw err_add;
-                                
                                 if(result_add) {
                                     // If new planet is successfully added, call getParameters again. 
                                     self.getParameters(callback);
