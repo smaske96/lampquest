@@ -1,11 +1,14 @@
 var mysql = require('mysql');
+var credentials = require('../config');
 
-var con = mysql.createConnection({
+/*var con = mysql.createConnection({
   host: "localhost",
-  user: "root",
-  password: "",
+  user: "webapp",
+  password: "csi3335",
   database: "lampquest"
-});
+});*/
+
+var con = mysql.createConnection(credentials.prod);
 
 con.connect(function(err) {
   if (err) throw err;

@@ -1,0 +1,3 @@
+{
+    "prod": {"host": "localhost", "user": "webapp", "password": "csi3335", "database":"lampquest"}
+}
