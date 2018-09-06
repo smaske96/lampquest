@@ -25,6 +25,7 @@ router.get('/planet_user/getEnergy',function(req,res){
     
     //Check if session is valid and get user_id
     user.getParameters(function(err_user, user_response) {
+
         if (err_user) throw err_user;
         
         var planet_user = new PlanetUser(user_response.user_id);
@@ -71,6 +72,7 @@ router.get('/planet_user/update_production', function(req, res) {
     var user = new User(req.session.uname, req.session.pword);
     
     user.getParameters(function(err_user, user_response) {
+
         if (err_user) throw err_user;
         
         var planet_user = new PlanetUser(user_response.user_id);
@@ -86,6 +88,7 @@ router.get('/planet_user/check_if_completed', function(req, res) {
     var user = new User(req.session.uname, req.session.pword);
     
     user.getParameters(function(err_user, user_response) {
+		
         if (err_user) throw err_user;
             
         

@@ -13,6 +13,11 @@ class User {
     // Check if the username is valid or not
     isValid(callback) {
         var self = this;
+		
+		if(!self.username || !self.password) {
+			callback(null, false);
+			return;
+		}
         
         var sql = "SELECT 1 FROM user WHERE username = ? AND password = ?";
         con.query(sql, [self.username, md5(self.password)], function (err, result) {
