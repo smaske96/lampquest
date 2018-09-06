@@ -21,8 +21,11 @@ router.post('/user/login',function(req,res){
     else {
         var user = new User(req.session.uname, req.session.pword);
         user.isValid(function(err, result) {
-            if(err) throw err;
-            if(result) {
+            if(err) {
+                res.status(500);
+                res.send(err);
+            }
+            else if(result) {
                 res.redirect('/home');
             }    
             else {
@@ -42,8 +45,11 @@ router.post('/user/valid', function(req, res) {
     else {
         var user = new User(req.session.uname, req.session.pword);
          user.isValid(function(err, result) {
-            if(err) throw err;
-            if(result) {
+            if(err) {
+                res.status(500);
+                res.send(err);
+            }
+            else if(result) {
                 res.redirect('/home');
             }    
             else {
@@ -60,8 +66,12 @@ router.get('/user/uname/available', function(req, res) {
     var user = new User(username, '');
     
     user.isUsernameAvailable(function(err, available) {
-        if(err) throw err;
-        res.send(available);
+        if(err) {
+            res.status(500);
+            res.send(err);
+        }
+        else
+            res.send(available);
     });
 });
 
@@ -80,22 +90,25 @@ router.post('/user/addnew', function(req,res) {
     
     var user = new User(username, password);
     user.isUsernameAvailable(function(err, available) {
-        if(err) throw err;
-        
-        if(!available) {
+        if(err) {
+            res.status(500);
+            res.send(err);
+        }
+        else if(!available) {
             res.redirect('/');
         }
-        
-        user.addUser(function(err, success) {
-            if(err) throw err;
-            
-            if(success) {   
-                res.redirect('/home');
-            }
-            else {
-                res.redirect('/');
-            }
-        });
+        else {
+            user.addUser(function(err, success) {
+                if(err) throw err;
+                
+                if(success) {   
+                    res.redirect('/home');
+                }
+                else {
+                    res.redirect('/');
+                }
+            });
+        }
     });
 });
 
@@ -111,12 +124,15 @@ router.get('/user/signout', function(req,res) {
 router.get('/user/parameters', function(req, res) {
     var user = new User(req.session.uname, req.session.pword);
     user.getParameters(function(err, response) {
-        if(err) throw err;
-        if(response) {
+        if(err) {
+            res.status(500);
+            res.send(err);
+        }
+        else if(response) {
             res.send(response);
         }
         else { //If not valid user
-            throw {name:"Invalid User Session", message:"Username or Password in the session is invalid"};
+            res.send({name:"Invalid User Session", message:"Username or Password in the session is invalid"});
         }
     });
 });

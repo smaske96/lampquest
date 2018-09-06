@@ -1,4 +1,4 @@
-var con = require('../scripts/db_connection.js').connection;
+var pool = require('../scripts/db_connection.js').connection_pool; // For database connection
 
 var Robot = require('../model/robot.js');
 
@@ -17,30 +17,50 @@ class PlanetUser {
                         FROM planet \
                         WHERE difficulty_level = ? \
                         LIMIT 1";
-        con.query(sql, [self.user_id, difficulty], function (err, result) {
-            if (err) throw err;
-               
+        
+        pool.getConnection(function(con_err, con) {
+            if(con_err) {
+                console.log("Error - " + Date() + "\nUnable to connect to database.");
+                callback(con_err);
+                return;
+            }
             
-            // If there are no new planets available, return false
-            if(result.affectedRows == 0) {
-                callback(null, false);
-            }
-            else {
-                //Add initial resources for the new planet to the user
-                var sql_1 = "INSERT INTO planet_user_item (planet_user_id, item_id, owned_qty) \
-                                SELECT planet_user_id, item_id, available_qty \
-                                FROM planet_item_init_resource NATURAL JOIN planet_user \
-                                WHERE planet_user_id = ?";
+            con.query(sql, [self.user_id, difficulty], function (err, result) {
+                if (err) {
+                    console.log('Error encountered on ' + Date());
+                    console.log(err);
+                    callback(err);
+                    return;
+                } 
                 
-                // insertId of result is the auto_increment number (i.e. user_id) inserted by the first query.
-                con.query(sql_1, [result.insertId], function (err_1) {
-                    if(err_1) throw err_1;
-                       
+                // If there are no new planets available, return false
+                if(result.affectedRows == 0) {
+                    callback(null, false);
+                    con.release();
+                }
+                else {
+                    //Add initial resources for the new planet to the user
+                    var sql_1 = "INSERT INTO planet_user_item (planet_user_id, item_id, owned_qty) \
+                                    SELECT planet_user_id, item_id, available_qty \
+                                    FROM planet_item_init_resource NATURAL JOIN planet_user \
+                                    WHERE planet_user_id = ?";
                     
-                    callback(null, true);
-                    
-                });
-            }
+                    // insertId of result is the auto_increment number (i.e. user_id) inserted by the first query.
+                    con.query(sql_1, [result.insertId], function (err_1) {
+                        if(err_1) {
+                            console.log('Error encountered on ' + Date());
+                            console.log(err_1);
+                            callback(err_1);
+                            con.release();
+                            return;
+                        }
+                        
+                        callback(null, true);
+                        con.release();
+                        
+                    });
+                }
+            });
         });
     }
     
@@ -53,57 +73,106 @@ class PlanetUser {
             var sql = "SELECT planet_user_id, planet_name, planet_image, difficulty_level \
                         FROM planet_user NATURAL JOIN planet \
                         WHERE user_id = ? AND planet_id = ?";
-            con.query(sql, [self.user_id, self.planet_id], function (err, result) {
-                if (err) throw err;
-                callback(null, result[0]);
+            pool.getConnection(function(con_err, con) {
+                if(con_err) {
+                    console.log("Error - " + Date() + "\nUnable to connect to database.");
+                    callback(con_err);
+                    return;
+                }
+                
+                con.query(sql, [self.user_id, self.planet_id], function (err, result) {
+                    if (err) {
+                        console.log('Error encountered on ' + Date());
+                        console.log(err);
+                        callback(err);
+                        con.release();
+                        return;
+                    }
+                   
+                    callback(null, result[0]);
+                    con.release();
+                });
             });
         }
         // If only user id is available, the extract data for the active planet (i.e. completed = 0)
         else if(self.user_id) {
             var sql = "SELECT planet_user_id, planet_name, planet_image, difficulty_level \
                         FROM planet_user NATURAL JOIN planet \
-                        WHERE user_id = ? AND completed = 0";           
-            con.query(sql, [self.user_id], function (err, result) {
-                if (err) throw err;
-                if(result.length == 0) {
-                    // No active planet found. 
-                    // Check if there is new planet is available 
-                    var check_new = "SELECT MIN(difficulty_level) AS difficulty \
-                                     FROM planet \
-                                     WHERE planet_id NOT IN ( \
-                                            SELECT planet_id \
-                                            FROM planet_user \
-                                            WHERE user_id = ? AND completed = 1\
-                                     )";
-                    con.query(check_new, [self.user_id], function(err_new, result_new) {
-                        if(err_new) throw err_new;
-                        if(result_new.length == 0) {
-                            // No new planet found
-                            callback(null, null);
-                        }
-                        else {
-                            self.addNewPlanet(result_new[0].difficulty, function(err_add, result_add) {
-                                if (err_add) throw err_add;
-                                if(result_add) {
-                                    // If new planet is successfully added, call getParameters again. 
-                                    self.getParameters(callback);
-                                }
-                                else {
-                                    // If new planet not added
-                                    callback(null, null);
-                                }
-                                
-                            });
-                        }
-                    });                 
-                    
-                    
-                    
-                    
+                        WHERE user_id = ? AND completed = 0";   
+            pool.getConnection(function(con_err, con) {
+                if(con_err) {
+                    console.log("Error - " + Date() + "\nUnable to connect to database.");
+                    callback(con_err);
+                    return;
                 }
-                else {
-                    callback(null, result[0]);
-                }
+            
+                con.query(sql, [self.user_id], function (err, result) {
+                    if (err) {
+                        console.log('Error encountered on ' + Date());
+                        console.log(err);
+                        callback(err);
+                        con.release();
+                        return;
+                    }
+                    
+                    if(result.length == 0) {
+                        // No active planet found. 
+                        // Check if there is new planet is available 
+                        var check_new = "SELECT MIN(difficulty_level) AS difficulty \
+                                        FROM planet \
+                                        WHERE planet_id NOT IN ( \
+                                                SELECT planet_id \
+                                                FROM planet_user \
+                                                WHERE user_id = ? AND completed = 1\
+                                        )";
+                        con.query(check_new, [self.user_id], function(err_new, result_new) {
+                            if (err_new) {
+                                console.log('Error encountered on ' + Date());
+                                console.log(err_new);
+                                callback(err_new);
+                                con.release();
+                                return;
+                            }
+                            
+                            if(result_new.length == 0) {
+                                // No new planet found
+                                callback(null, null);
+                            }
+                            else {
+                                self.addNewPlanet(result_new[0].difficulty, function(err_add, result_add) {
+                                    if (err_add) {
+                                        console.log('Error encountered on ' + Date());
+                                        console.log(err_add);
+                                        callback(err_add);
+                                        con.release();
+                                        return;
+                                    }
+                                    
+                                    if(result_add) {
+                                        // If new planet is successfully added, call getParameters again. 
+                                        self.getParameters(callback);
+                                        con.release();
+                                    }
+                                    else {
+                                        // If new planet not added
+                                        callback(null, null);
+                                        con.release();
+                                    }
+                                    
+                                });
+                            }
+                            
+                            
+                        });             
+                        
+                    }
+                    else {
+                        callback(null, result[0]);
+                        con.release();
+                    }
+                    
+                });
+
             });
         } 
     }
@@ -115,13 +184,28 @@ class PlanetUser {
         if(self.user_id) {
             var sql = "SELECT energy \
                         FROM planet_user NATURAL JOIN planet \
-                        WHERE user_id = ? AND completed = 0";           
-            con.query(sql, [self.user_id], function (err, result) {
-                if (err) throw err;
-                if(result.length == 0) 
-                    callback(null, null);
-                else 
-                    callback(null, result[0].energy);
+                        WHERE user_id = ? AND completed = 0";     
+            pool.getConnection(function(con_err, con) {
+                if(con_err) {
+                    console.log("Error - " + Date() + "\nUnable to connect to database.");
+                    callback(con_err);
+                    return;
+                }
+                con.query(sql, [self.user_id], function (err, result) {
+                    if (err) {
+                        console.log('Error encountered on ' + Date());
+                        console.log(err);
+                        callback(err);
+                        con.release();
+                        return;
+                    }
+                    if(result.length == 0) 
+                        callback(null, null);
+                    else 
+                        callback(null, result[0].energy);
+                    
+                    con.release();
+                });
             });
         } 
     }
@@ -134,10 +218,26 @@ class PlanetUser {
             var sql = "SELECT item_name, item_image, required_qty \
                         FROM planet_item_goal NATURAL JOIN planet_user NATURAL JOIN item \
                         WHERE user_id = ? AND completed = 0";
-            con.query(sql, [self.user_id], function (err, result) {
-                if (err) throw err;
+            pool.getConnection(function(con_err, con) {
+                if(con_err) {
+                    console.log("Error - " + Date() + "\nUnable to connect to database.");
+                    callback(con_err);
+                    return;
+                }
                 
-                callback(null, result);
+                con.query(sql, [self.user_id], function (err, result) {
+                    if (err) {
+                        console.log('Error encountered on ' + Date());
+                        console.log(err);
+                        callback(err);
+                        con.release();
+                        return;
+                    }
+                    
+                    callback(null, result);
+                    con.release();
+                });
+
             });
         }
     }
@@ -153,10 +253,26 @@ class PlanetUser {
                         WHERE user_id = ? AND completed = 0\
                         GROUP BY item_id \
                         HAVING SUM(owned_qty) > 0";
-            con.query(sql, [self.user_id], function (err, result) {
-                if (err) throw err;
+            pool.getConnection(function(con_err, con) {
+                if(con_err) {
+                    console.log("Error - " + Date() + "\nUnable to connect to database.");
+                    callback(con_err);
+                    return;
+                }
                 
-                callback(null, result);
+                con.query(sql, [self.user_id], function (err, result) {
+                    if (err) {
+                        console.log('Error encountered on ' + Date());
+                        console.log(err);
+                        callback(err);
+                        con.release();
+                        return;
+                    }
+                    
+                    callback(null, result);
+                    con.release();
+                });
+
             });
         }
     }
@@ -175,10 +291,25 @@ class PlanetUser {
                         WHERE user_id = ? AND completed = 0 \
                             AND enabled = 1 \
                         ORDER BY build_start_time";
-            con.query(sql, [self.user_id], function (err, result) {
-                if (err) throw err;
+            pool.getConnection(function(con_err, con) {
+                if(con_err) {
+                    console.log("Error - " + Date() + "\nUnable to connect to database.");
+                    callback(con_err);
+                    return;
+                }
                 
-                callback(null, result);
+                con.query(sql, [self.user_id], function (err, result) {
+                    if (err) {
+                        console.log('Error encountered on ' + Date());
+                        console.log(err);
+                        callback(err);
+                        con.release();
+                        return;
+                    }
+                    
+                    callback(null, result);
+                    con.release();
+                });
             });
         }
     }
@@ -186,7 +317,7 @@ class PlanetUser {
     // Updates the production of the enabled robots in the planet 
     // Performs both periodic updated and catch-up updates in the planet
     updateProduction(first_call, callback) {  
-        // first_call variable is used so that in multiple calls of this method during the recursion, only one final callabck is issued.
+        // first_call variable is used so that in multiple calls of this method during the recursion, only one final callback is issued.
         var self = this;
         
         self.catchup_required = false; //Flag to check if catchup is required
@@ -204,7 +335,10 @@ class PlanetUser {
             function next() {
                 if(i < robot_ids.length) {
                     process(robot_ids[i++].robot_id, function(err_produce, result_produce, repeat){
-                        if(err_produce) throw err_produce;
+                        if(err_produce) {
+                            callback(err_produce);
+                            return;
+                        }
                            
                         // repeat flag is set if the robot can again produce items.
                         if(repeat) self.catchup_required = true;
@@ -252,65 +386,106 @@ class PlanetUser {
                     WHERE user_id = ? \
                         AND COALESCE(owned_qty,0) < required_qty"; // Completed planet_user will return empty result 
         
-        con.query(sql, [self.user_id], function (err, result) {
-            if(err) 
-                throw err;
-            else if(result.length > 0) { //Planet is not completed yet.
-                callback(null, false);
+        pool.getConnection(function(con_err, con) {
+            if(con_err) {
+                console.log("Error - " + Date() + "\nUnable to connect to database.");
+                callback(con_err);
+                return;
             }
-            else {
-                // Fetch current difficulty level to add new planet
-                self.getParameters(function(err_params, result_params) {
-                    if(err_params) throw err_params;
-                    
-                    
-                    if(!result_params) { 
-                        // There is no current planet. All planets are completed. 
-                        // All planets are completed. No planet remaining.
-                        callback(null, false, true);
-                        return;
-                    }
-                    
-                    var difficulty = result_params.difficulty_level;
-                    
-                    // If completed, update current planet `completed` field.
-                    var update = "UPDATE planet_user \
-                                    SET completed = 1 \
-                                    WHERE user_id = ? AND completed = 0";
-                                    
-                    con.query(update, [self.user_id], function(err_update) {
-                        if(err_update) throw err_update;
-                        
-                        // Add new planet of higher difficulty 
-                        self.addNewPlanet(difficulty + 1, function(err_new, result_new) {
-                            if(err_new) throw err_new;
-                            //Check if new planet inserted successfully
-                            if(result_new) {
-                                
-                                // Add experience point to user
-                                var exp_pts = "UPDATE user SET experience = experience + ? WHERE user_id = ?";
-                                con.query(exp_pts, [difficulty, self.user_id], function(err_exp) {
-                                    if(err_exp) throw err_exp;
-                                    
-                                    callback(null, true);
-                                });
-                            }
-                            else {
-                                //No new planet were inserted 
-                                // Set all completed flag in callback function
-                                
-                               
-                                callback(null, false, true);
-                            }
-                            
-                            
-                        });
-                    });
-
-                    
-                });
                 
-            }
+            con.query(sql, [self.user_id], function (err, result) {
+                if (err) {
+                    console.log('Error encountered on ' + Date());
+                    console.log(err);
+                    callback(err);
+                    con.release();
+                    return;
+                }
+                
+                if(result.length > 0) { //Planet is not completed yet.
+                    callback(null, false);
+                    con.release();
+                }
+                else {
+                    // Fetch current difficulty level to add new planet
+                    self.getParameters(function(err_params, result_params) {
+                        if(err_params) {
+                            callback(err_params);
+                            return;
+                        }
+                        
+                        
+                        if(!result_params) { 
+                            // There is no current planet. All planets are completed. 
+                            // All planets are completed. No planet remaining.
+                            callback(null, false, true);
+                            con.release();
+                            return;
+                        }
+                        
+                        var difficulty = result_params.difficulty_level;
+                        
+                        // If completed, update current planet `completed` field.
+                        var update = "UPDATE planet_user \
+                                        SET completed = 1 \
+                                        WHERE user_id = ? AND completed = 0";
+                                        
+                        con.query(update, [self.user_id], function(err_update) {
+                            if (err_update) {
+                                console.log('Error encountered on ' + Date());
+                                console.log(err_update);
+                                callback(err_update);
+                                con.release();
+                                return;
+                            }
+                            
+                            // Add new planet of higher difficulty 
+                            self.addNewPlanet(difficulty + 1, function(err_new, result_new) {
+                                if (err_new) {
+                                    console.log('Error encountered on ' + Date());
+                                    console.log(err_new);
+                                    callback(err_new);
+                                    con.release();
+                                    return;
+                                }
+                                //Check if new planet inserted successfully
+                                if(result_new) {
+                                    
+                                    // Add experience point to user
+                                    var exp_pts = "UPDATE user SET experience = experience + ? WHERE user_id = ?";
+                                    con.query(exp_pts, [difficulty, self.user_id], function(err_exp) {
+                                        if (err_exp) {
+                                            console.log('Error encountered on ' + Date());
+                                            console.log(err_exp);
+                                            callback(err_exp);
+                                            con.release();
+                                            return;
+                                        }
+                                        
+                                        callback(null, true);
+                                        con.release();
+                                    });
+                                }
+                                else {
+                                    //No new planet were inserted 
+                                    // Set all completed flag in callback function
+                                    
+                                
+                                    callback(null, false, true);
+                                    con.release();
+                                }
+                                
+                                
+                            });
+                        });
+    
+                        
+                    });
+                    
+                }
+                    
+            });
+    
         });
         
     }
@@ -347,31 +522,71 @@ class PlanetUser {
                                 INNER JOIN  planet p ON  p.planet_id = pu.planet_id \
                              SET pu.energy = p.initial_energy \
                              WHERE pu.user_id = ? AND completed = 0";
-                                
-        con.query(del_log, [self.user_id], function (err_del_log) {
-            if(err_del_log) throw err_del_log;
+        
+        pool.getConnection(function(con_err, con) {
+            if(con_err) {
+                console.log("Error - " + Date() + "\nUnable to connect to database.");
+                callback(con_err);
+                return;
+            }
             
-            con.query(del_robots, [self.user_id], function (err_del_robots) {
-                if(err_del_robots) throw err_del_robots;
+            con.query(del_log, [self.user_id], function (err_del_log) {
+                if (err_del_log) {
+                    console.log('Error encountered on ' + Date());
+                    console.log(err_del_log);
+                    callback(err_del_log);
+                    con.release();
+                    return;
+                }
                 
-                con.query(del_owned_items, [self.user_id], function (err_del_owned_items) {
-                    if(err_del_owned_items) throw err_del_owned_items;
+                con.query(del_robots, [self.user_id], function (err_del_robots) {
+                    if (err_del_robots) {
+                        console.log('Error encountered on ' + Date());
+                        console.log(err_del_robots);
+                        callback(err_del_robots);
+                        con.release();
+                        return;
+                    }
                     
-                    con.query(insert_init_items, [self.user_id], function (err_insert_items) {
-                        if(err_insert_items) throw err_insert_items;
+                    con.query(del_owned_items, [self.user_id], function (err_del_owned_items) {
+                        if (err_del_owned_items) {
+                            console.log('Error encountered on ' + Date());
+                            console.log(err_del_owned_items);
+                            callback(err_del_owned_items);
+                            con.release();
+                            return;
+                        }
                         
-                        con.query(update_energy, [self.user_id], function (err_update_energy) {
-                            if(err_update_energy) throw err_update_energy;
+                        con.query(insert_init_items, [self.user_id], function (err_insert_items) {
+                            if (err_insert_items) {
+                                console.log('Error encountered on ' + Date());
+                                console.log(err_insert_items);
+                                callback(err_insert_items);
+                                con.release();
+                                return;
+                            }
                             
-                            callback(null, true);
+                            con.query(update_energy, [self.user_id], function (err_update_energy) {
+                                if (err_update_energy) {
+                                    console.log('Error encountered on ' + Date());
+                                    console.log(err_update_energy);
+                                    callback(err_update_energy);
+                                    con.release();
+                                    return;
+                                }
+                                
+                                callback(null, true);
+                                con.release();
+                            });
+                            
                         });
-                        
                     });
+                    
                 });
                 
             });
-            
         });
+            
     }
 
 }

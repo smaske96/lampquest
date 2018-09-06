@@ -1,4 +1,4 @@
-var con = require('../scripts/db_connection.js').connection;
+var pool = require('../scripts/db_connection.js').connection_pool; // For database connection
 
 class RobotType {
     constructor (robot_type_id) {
@@ -16,26 +16,39 @@ class RobotType {
                         LEFT JOIN combiner ON robot_type_id = combiner_id \
                         LEFT JOIN diffusor ON robot_type_id = diffusor_id \
                     WHERE robot_type_id = ?";
-            
-        con.query(sql, [self.robot_type_id], function (err, result) {
-            if (err) throw err;
-            
-            if(result.length != 1) {
-                callback({name: "Database value error", message:"No robot type found!"},null);
+        pool.getConnection(function(con_err, con) {
+            if(con_err) {
+                console.log("Error - " + Date() + "\nUnable to connect to database.");
+                callback(con_err);
+                return;
             }
-            else {
-                if(result[0].is_combiner) {
-                    callback(null, "combiner");
+            con.query(sql, [self.robot_type_id], function (err, result) {
+                if (err) {
+                    console.log('Error encountered on ' + Date());
+                    console.log(err);
+                    callback(err);
+                    con.release();
+                    return;
                 }
-                else if(result[0].is_diffusor) {
-                    callback(null, "diffusor");
+                
+                if(result.length != 1) {
+                    callback({name: "Database value error", message:"No robot type found!"},null);
                 }
                 else {
-                    // Error
-                    callback({name:"Database value error", message:"Robot type is neither diffusor nor combiner!"},null);
+                    if(result[0].is_combiner) {
+                        callback(null, "combiner");
+                    }
+                    else if(result[0].is_diffusor) {
+                        callback(null, "diffusor");
+                    }
+                    else {
+                        // Error
+                        callback({name:"Database value error", message:"Robot type is neither diffusor nor combiner!"},null);
+                    }
+                    con.release();
                 }
-            }
-        });
+            });
+        });            
     }
     
     // Returns all the parameters of the robot type 
@@ -59,7 +72,10 @@ class RobotType {
         var type_id = self.robot_type_id;
         
         self.getType(function(err, type) {
-            if(err) throw err;
+            if(err) {
+                callback(err);
+                return;
+            }
             if(type == "combiner") {
                 var sql = "SELECT \
                                 robot_type_id, \
@@ -80,34 +96,48 @@ class RobotType {
                               INNER JOIN item c ON consume_item_id = c.item_id \
                               INNER JOIN item p ON produce_item_id = p.item_id \
                            WHERE robot_type_id = ?";
-                           
-                con.query(sql, [type_id], function (err, records) {
-                    if (err) throw err;
-                    
-                    var result = {};
-                    result.robot_type_id = records[0].robot_type_id;
-                    result.robot_type = records[0].robot_type_name;
-                    result.image      = records[0].robot_type_image;
-                    result.time_req   = records[0].time_required;
-                    result.energy     = records[0].energy_required;
-                    result.cost       = records[0].initial_energy_cost;
-                    result.type       = type;
-                    
-                    // Only single item will be produced for combiner, so all rows will contain same produce items
-                    result.produce = [{  'item_id'   : records[0].produce_item_id, 
-                                            'item'      : records[0].produce_item
-                                     }];
-                    
-                    // Add all consuming items in an array
-                    result.consume = [];
-                    records.forEach(function(item) {
-                        result.consume.push({    'item_id'   :   item.consume_item_id, 
-                                                    'item'      :   item.consume_item,
-                                                    'qty'       :   item.qty_consumed
-                                              });
-                        if(result.consume.length == records.length) callback(null, result);
+                pool.getConnection(function(con_err, con) {
+                    if(con_err) {
+                        console.log("Error - " + Date() + "\nUnable to connect to database.");
+                        callback(con_err);
+                        return;
+                    }
+                    con.query(sql, [type_id], function (err, records) {
+                        if (err) {
+                            console.log('Error encountered on ' + Date());
+                            console.log(err);
+                            callback(err);
+                            con.release();
+                            return;
+                        } 
+                        
+                        var result = {};
+                        result.robot_type_id = records[0].robot_type_id;
+                        result.robot_type = records[0].robot_type_name;
+                        result.image      = records[0].robot_type_image;
+                        result.time_req   = records[0].time_required;
+                        result.energy     = records[0].energy_required;
+                        result.cost       = records[0].initial_energy_cost;
+                        result.type       = type;
+                        
+                        // Only single item will be produced for combiner, so all rows will contain same produce items
+                        result.produce = [{  'item_id'   : records[0].produce_item_id, 
+                                                'item'      : records[0].produce_item
+                                         }];
+                        
+                        // Add all consuming items in an array
+                        result.consume = [];
+                        records.forEach(function(item) {
+                            result.consume.push({    'item_id'   :   item.consume_item_id, 
+                                                        'item'      :   item.consume_item,
+                                                        'qty'       :   item.qty_consumed
+                                                  });
+                            if(result.consume.length == records.length) callback(null, result);
+                        });
+                        con.release();
                     });
-                });
+
+                });                    
             }
             else {
                 var sql = "SELECT \
@@ -130,35 +160,50 @@ class RobotType {
                               INNER JOIN item c ON consume_item_id = c.item_id \
                               INNER JOIN item p ON produce_item_id = p.item_id \
                            WHERE robot_type_id = ?";
-
-                con.query(sql, [type_id], function (err, records) {
-                    if(err) throw err;
-                    var result = {};
-                    result.robot_type_id = records[0].robot_type_id;
-                    result.robot_type   = records[0].robot_type_name;
-                    result.image        = records[0].robot_type_image;
-                    result.time_req     = records[0].time_required;
-                    result.energy_limit = records[0].energy_limit;
-                    result.energy       = records[0].energy_released;
-                    result.cost       = records[0].initial_energy_cost;
-                    result.type = type;
+                pool.getConnection(function(con_err, con) {
+                    if(con_err) {
+                        console.log("Error - " + Date() + "\nUnable to connect to database.");
+                        callback(con_err);
+                        return;
+                    }
                     
-                    // Only single item will be consumed for diffusor. So all row will contain same consume item
-                    result.consume = [{  'item_id'   : records[0].consume_item_id, 
-                                            'item'      : records[0].consume_item
-                                        }];
-                    
-                    // Add all producing items in an array
-                    result.produce = [];
-                    records.forEach(function(item) {
-                        result.produce.push({  'item_id' : item.produce_item_id, 
-                                                  'item'    : item.produce_item, 
-                                                  'qty'     : item.qty_produced
-                                              });  
-                        if(result.produce.length == records.length) callback(null, result);
+                    con.query(sql, [type_id], function (err, records) {
+                        if (err) {
+                            console.log('Error encountered on ' + Date());
+                            console.log(err);
+                            callback(err);
+                            con.release();
+                            return;
+                        } 
+                        
+                        var result = {};
+                        result.robot_type_id = records[0].robot_type_id;
+                        result.robot_type   = records[0].robot_type_name;
+                        result.image        = records[0].robot_type_image;
+                        result.time_req     = records[0].time_required;
+                        result.energy_limit = records[0].energy_limit;
+                        result.energy       = records[0].energy_released;
+                        result.cost       = records[0].initial_energy_cost;
+                        result.type = type;
+                        
+                        // Only single item will be consumed for diffusor. So all row will contain same consume item
+                        result.consume = [{  'item_id'   : records[0].consume_item_id, 
+                                                'item'      : records[0].consume_item
+                                            }];
+                        
+                        // Add all producing items in an array
+                        result.produce = [];
+                        records.forEach(function(item) {
+                            result.produce.push({  'item_id' : item.produce_item_id, 
+                                                      'item'    : item.produce_item, 
+                                                      'qty'     : item.qty_produced
+                                                  });  
+                            if(result.produce.length == records.length) callback(null, result);
+                        });
+                        
+                        con.release();
                     });
-                    
-                    
+
                 });
             }
         
@@ -169,14 +214,29 @@ class RobotType {
     // Fetch all robot type ids in the database. 
     fetchAllRobotTypeIds(callback){
         var sql = "SELECT robot_type_id FROM robot_type";
-        con.query(sql, [], function (err, result) {
-            if(err) throw err;
+        pool.getConnection(function(con_err, con) {
+            if(con_err) {
+                console.log("Error - " + Date() + "\nUnable to connect to database.");
+                callback(con_err);
+                return;
+            }
             
-            var ids = [];
-            result.forEach(function(item) {
-                ids.push(item.robot_type_id);
-                if(ids.length == result.length) callback(null, ids);
+            con.query(sql, [], function (err, result) {
+                if (err) {
+                    console.log('Error encountered on ' + Date());
+                    console.log(err);
+                    callback(err);
+                    con.release();
+                    return;
+                } 
+                
+                var ids = [];
+                result.forEach(function(item) {
+                    ids.push(item.robot_type_id);
+                    if(ids.length == result.length) callback(null, ids);
+                });
             });
+
         });
     }
     

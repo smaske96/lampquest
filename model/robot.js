@@ -1,4 +1,4 @@
-var con = require('../scripts/db_connection.js').connection;
+var pool = require('../scripts/db_connection.js').connection_pool; // For database connection
 
 var RobotType = require('../model/robot_type.js');
 var moment = require('moment');
@@ -14,17 +14,36 @@ class Robot {
         var self = this;
         
         var sql = "SELECT robot_type_id FROM robot WHERE robot_id = ?";
-        con.query(sql, [self.robot_id], function (err, result) {
-            if (err) throw err;
+        pool.getConnection(function(con_err, con) {
+            if(con_err) {
+                console.log("Error - " + Date() + "\nUnable to connect to database.");
+                callback(con_err);
+                return;
+            }
             
-            var robot_type = new RobotType(result[0].robot_type_id);
-            
-            robot_type.getType(function(err_type, type) {
-                if(err_type) 
-                    callback(err_type);
-                else 
+            con.query(sql, [self.robot_id], function (err, result) {
+                if (err) {
+                    console.log('Error encountered on ' + Date());
+                    console.log(err);
+                    callback(err);
+                    con.release();
+                    return;
+                }
+                
+                var robot_type = new RobotType(result[0].robot_type_id);
+                
+                robot_type.getType(function(err_type, type) {
+                    if(err_type) {
+                        callback(err_type);
+                        con.release();
+                        return;
+                    }
+                        
                     callback(null, type);
+                    con.release();
+                });
             });
+
         });
     }
 
@@ -35,16 +54,37 @@ class Robot {
         var sql = "SELECT robot_id, robot_name, robot_type_id, enabled \
                     FROM robot \
                     WHERE robot_id = ?";
-        con.query(sql, [self.robot_id], function (err, result) {
-            if (err) throw err;
+        pool.getConnection(function(con_err, con) {
+            if(con_err) {
+                console.log("Error - " + Date() + "\nUnable to connect to database.");
+                callback(con_err);
+                return;
+            }
             
-            var robot_type = new RobotType(result[0].robot_type_id);
-            //Fetch robot type parameters
-            robot_type.getParameters(function (err, type_params){
-                if (err) throw err;
+            con.query(sql, [self.robot_id], function (err, result) {
+                if (err) {
+                    console.log('Error encountered on ' + Date());
+                    console.log(err);
+                    callback(err);
+                    con.release();
+                    return;
+                }
                 
-                result[0].type = type_params;
-                callback(null, result[0]);
+                var robot_type = new RobotType(result[0].robot_type_id);
+                //Fetch robot type parameters
+                robot_type.getParameters(function (err_type, type_params){
+                    if (err_type) {
+                        console.log('Error encountered on ' + Date());
+                        console.log(err_type);
+                        callback(err_type);
+                        con.release();
+                        return;
+                    }
+                    
+                    result[0].type = type_params;
+                    callback(null, result[0]);
+                    con.release();
+                });
             });
         });
     }
@@ -55,16 +95,30 @@ class Robot {
                     FROM robot \
                           NATURAL JOIN planet_user  \
                     WHERE user_id = ? AND completed = 0";
-                    
-        con.query(sql, [user_id], function (err, result) {
-            if (err) throw err;
+        pool.getConnection(function(con_err, con) {
+            if(con_err) {
+                console.log("Error - " + Date() + "\nUnable to connect to database.");
+                callback(con_err);
+                return;
+            }
             
-            var ids = [];
-            result.forEach(function(item) {
-                ids.push(item.robot_id);
-                if(ids.length == result.length) callback(null, ids);
+            con.query(sql, [user_id], function (err, result) {
+                if (err) {
+                    console.log('Error encountered on ' + Date());
+                    console.log(err);
+                    callback(err);
+                    con.release();
+                    return;
+                }
+                
+                var ids = [];
+                result.forEach(function(item) {
+                    ids.push(item.robot_id);
+                    if(ids.length == result.length) callback(null, ids);
+                });
             });
-        });
+
+        });            
     }
     
     
@@ -78,15 +132,32 @@ class Robot {
                           initial_energy_cost AS energy_cost \
                     FROM planet_user CROSS JOIN robot_type \
                     WHERE user_id = ? AND completed = 0 AND robot_type_id = ?";
-        con.query(sql, [user_id, robot_type_id], function (err, result) {
-             if (err) throw err;
-             if(result[0].energy_cost > result[0].energy_available) {
-                callback(null, false);
-             }
-             else {
-                callback(null, true);
-             }
-         });            
+                    
+        pool.getConnection(function(con_err, con) {
+            if(con_err) {
+                console.log("Error - " + Date() + "\nUnable to connect to database.");
+                callback(con_err);
+                return;
+            }
+            con.query(sql, [user_id, robot_type_id], function (err, result) {
+                if (err) {
+                    console.log('Error encountered on ' + Date());
+                    console.log(err);
+                    callback(err);
+                    con.release();
+                    return;
+                }
+                
+                if(result[0].energy_cost > result[0].energy_available) {
+                    callback(null, false);
+                }
+                else {
+                    callback(null, true);
+                }
+                con.release();
+            });
+        });
+                        
                    
     }
     
@@ -109,7 +180,10 @@ class Robot {
         
         // First check if initial energy cost is met 
         self.checkEnergyCost(user_id, robot_type_id, function (err, valid) {
-            if (err) throw err;
+            if (err) {
+                callback(err);
+                return;
+            }
             
             if(valid) {
                 // Subtract the available energy in the planet
@@ -120,23 +194,45 @@ class Robot {
                                                         WHERE robot_type_id=? \
                                                     ) \
                               WHERE user_id = ? AND completed = 0";
-                con.query(update, [robot_type_id, user_id], function (err_update) {
-                    if (err) throw err_update;
+                pool.getConnection(function(con_err, con) {
+                    if(con_err) {
+                        console.log("Error - " + Date() + "\nUnable to connect to database.");
+                        callback(con_err);
+                        return;
+                    }
                     
-                    // Insert the robot record
-                    var sql = "INSERT INTO robot (robot_name, planet_user_id, robot_type_id) \
-                                SELECT ?, planet_user_id, ? \
-                                FROM planet_user \
-                                WHERE user_id = ? AND completed = 0";
-                                
-                    var robot_name = getRandomRobotName();
-                    con.query(sql, [robot_name, robot_type_id, user_id], function (err_insert, result) {
-                        if (err_insert) throw err_insert;
+                    con.query(update, [robot_type_id, user_id], function (err_update) {
+                        if (err_update) {
+                            console.log('Error encountered on ' + Date());
+                            console.log(err_update);
+                            callback(err_update);
+                            con.release();
+                            return;
+                        }
                         
-                        callback(null, true);
-                    });       
-                    
-                });              
+                        // Insert the robot record
+                        var sql = "INSERT INTO robot (robot_name, planet_user_id, robot_type_id) \
+                                    SELECT ?, planet_user_id, ? \
+                                    FROM planet_user \
+                                    WHERE user_id = ? AND completed = 0";
+                                    
+                        var robot_name = getRandomRobotName();
+                        con.query(sql, [robot_name, robot_type_id, user_id], function (err_insert, result) {
+                            if (err_insert) {
+                                console.log('Error encountered on ' + Date());
+                                console.log(err_insert);
+                                callback(err_insert);
+                                con.release();
+                                return;
+                            }
+                            
+                            callback(null, true);
+                            con.release();
+                        });       
+                        
+                    });
+                });
+                                  
             }
             else {
                 // If energy is not sufficient, return false 
@@ -152,53 +248,103 @@ class Robot {
         
         // Fetch current enabled value
         var sql = "SELECT enabled FROM robot WHERE robot_id = ?";
-        con.query(sql, [self.robot_id], function(err, result) {
-            if(err) throw err;
+        
+        pool.getConnection(function(con_err, con) {
+            if(con_err) {
+                console.log("Error - " + Date() + "\nUnable to connect to database.");
+                callback(con_err);
+                return;
+            }
             
-            var update = "UPDATE robot SET enabled = ? WHERE robot_id = ?";
-            
-            //Get new enabled value (opposite of previous) and update it. If value is given set new_enabled as the value 
-            var new_enabled = value === undefined ? (result[0].enabled == 0 ? 1 : 0) : value;
-            con.query(update,[new_enabled, self.robot_id], function(err_update) {
-               if (err_update) throw err_update;
-               // If enabled is turned off, delete the active record in item_robot
-               if(new_enabled == 0) {
-                    var del = "DELETE FROM item_robot WHERE robot_id = ? AND build_end_time IS NULL";
-                    con.query(del, [self.robot_id], function(err_delete) {
-                        if (err_delete) throw err_delete;
-                        callback(null, true);
-                    });
-               }
-               // If enabled is turn on, insert new record in item_robot with start_time as current timestamp if the robot can produce
-               else {
-                    self.canBuild(self, function(err_build, can_build) {
-                        if(err_build) throw err_build;
-                        
-                        if(can_build) {
-                            var insert = "INSERT INTO item_robot (item_id, robot_id) \
-                                            SELECT COALESCE(d.produce_item_id, c.produce_item_id) item_id,  robot_id\
-                                            FROM robot_type rt \
-                                                NATURAL JOIN robot r \
-                                                LEFT JOIN produce_diffusor d ON rt.robot_type_id = d.diffusor_id \
-                                                LEFT JOIN combiner c ON rt.robot_type_id = c.combiner_id \
-                                            WHERE \
-                                                robot_id = ?";
-                            con.query(insert, [self.robot_id], function(err_insert) {
-                                if (err_insert) throw err_insert;
-                                callback(null, true);
-                            });
-                        }
-                        else {
-                            //If robot cannot build, turn off enabled flag.
-                            self.toggleEnabled(0, function(err_repeat, result_repeat){
-                                if(err_repeat) throw err_repeat;
-                                
-                                callback(null, false);
-                            });
-                        }
-                    });
-               }
+            con.query(sql, [self.robot_id], function(err, result) {
+                if (err) {
+                    console.log('Error encountered on ' + Date());
+                    console.log(err);
+                    callback(err);
+                    con.release();
+                    return;
+                }
+                
+                var update = "UPDATE robot SET enabled = ? WHERE robot_id = ?";
+                
+                //Get new enabled value (opposite of previous) and update it. If value is given set new_enabled as the value 
+                var new_enabled = value === undefined ? (result[0].enabled == 0 ? 1 : 0) : value;
+                con.query(update,[new_enabled, self.robot_id], function(err_update) {
+                    if (err_update) {
+                        console.log('Error encountered on ' + Date());
+                        console.log(err_update);
+                        callback(err_update);
+                        con.release();
+                        return;
+                    }
+                   // If enabled is turned off, delete the active record in item_robot
+                   if(new_enabled == 0) {
+                        var del = "DELETE FROM item_robot WHERE robot_id = ? AND build_end_time IS NULL";
+                        con.query(del, [self.robot_id], function(err_delete) {
+                            if (err_delete) {
+                                console.log('Error encountered on ' + Date());
+                                console.log(err_delete);
+                                callback(err_delete);
+                                con.release();
+                                return;
+                            }
+                            callback(null, true);
+                            con.release();
+                        });
+                   }
+                   // If enabled is turn on, insert new record in item_robot with start_time as current timestamp if the robot can produce
+                   else {
+                        self.canBuild(self, function(err_build, can_build) {
+                            if (err_build) {
+                                console.log('Error encountered on ' + Date());
+                                console.log(err_build);
+                                callback(err_build);
+                                con.release();
+                                return;
+                            }
+                            
+                            if(can_build) {
+                                var insert = "INSERT INTO item_robot (item_id, robot_id) \
+                                                SELECT COALESCE(d.produce_item_id, c.produce_item_id) item_id,  robot_id\
+                                                FROM robot_type rt \
+                                                    NATURAL JOIN robot r \
+                                                    LEFT JOIN produce_diffusor d ON rt.robot_type_id = d.diffusor_id \
+                                                    LEFT JOIN combiner c ON rt.robot_type_id = c.combiner_id \
+                                                WHERE \
+                                                    robot_id = ?";
+                                con.query(insert, [self.robot_id], function(err_insert) {
+                                    if (err_build) {
+                                        console.log('Error encountered on ' + Date());
+                                        console.log(err_build);
+                                        callback(err_build);
+                                        con.release();
+                                        return;
+                                    }
+                                    callback(null, true);
+                                    con.release();
+                                });
+                            }
+                            else {
+                                //If robot cannot build, turn off enabled flag.
+                                self.toggleEnabled(0, function(err_repeat, result_repeat){
+                                    if (err_repeat) {
+                                        console.log('Error encountered on ' + Date());
+                                        console.log(err_repeat);
+                                        callback(err_repeat);
+                                        con.release();
+                                        return;
+                                    }
+                                    
+                                    callback(null, false);
+                                    con.release();
+                                });
+                            }
+                        });
+                   }
+                });
             });
+
+            
         });
         
     }
@@ -226,86 +372,121 @@ class Robot {
                                 r.robot_id = ? AND r.enabled = 1 \
                             GROUP BY COALESCE(cc.consume_item_id, d.consume_item_id)";
         
-        
-        con.query(sql_check_qty, [robot_id], function (err, result) {
-            if(err) throw err;
+        pool.getConnection(function(con_err, con) {
+            if(con_err) {
+                console.log("Error - " + Date() + "\nUnable to connect to database.");
+                callback(con_err);
+                return;
+            }
             
-            if(result.length == 0) { //If there are no items at all, then robot cannot produce
-                callback(null, false);
-            }
-            else {
-                var count = 0;
-                var checkInvalid = false; //Flag to check if there is any insufficient resources
-                result.forEach(function(record) {
-                    //If one of the resources is not sufficient, flag is set
-                    if(record.owned_qty < record.req_quantity) checkInvalid = true; 
-                    
-                    if(++count == result.length) {
-                    //After checking all records...
-                        if(checkInvalid) {
-                            console.log("Quantity of required items not sufficient.");
-                            callback(null, false);
-                        }
-                        else {
-                            // Resources are sufficient
-                            
-                            // Check if energy is sufficient if it is combiner, check if energy limit is reached if diffusor
-                            // so get the type of the robot first
-                            self.getType(function(err_type, type){
-                                if(err_type) throw err_type;
+            con.query(sql_check_qty, [robot_id], function (err, result) {
+                if (err) {
+                    console.log('Error encountered on ' + Date());
+                    console.log(err);
+                    callback(err);
+                    con.release();
+                    return;
+                }
+                
+                if(result.length == 0) { //If there are no items at all, then robot cannot produce
+                    callback(null, false);
+                    con.release();
+                }
+                else {
+                    var count = 0;
+                    var checkInvalid = false; //Flag to check if there is any insufficient resources
+                    result.forEach(function(record) {
+                        //If one of the resources is not sufficient, flag is set
+                        if(record.owned_qty < record.req_quantity) checkInvalid = true; 
+                        
+                        if(++count == result.length) {
+                        //After checking all records...
+                            if(checkInvalid) {
+                                console.log("Quantity of required items not sufficient.");
+                                callback(null, false);
+                                con.release();
+                            }
+                            else {
+                                // Resources are sufficient
                                 
-                                if(type == "combiner") {
-                                    //If combiner, check if energy is sufficient 
-                                    var sql_check_energy = "SELECT 1 \
-                                                            FROM robot r \
-                                                                INNER JOIN combiner c ON r.robot_type_id = c.combiner_id \
-                                                                INNER JOIN planet_user pu ON r.planet_user_id = pu.planet_user_id\
-                                                            WHERE   \
-                                                                r.robot_id = ? \
-                                                                AND pu.energy >= c.energy_required";
-                                    con.query(sql_check_energy, [robot_id], function (err_energy, result_energy) {
-                                        if(err_energy) callback(err_energy);
-                                        
-                                        if(result_energy.length != 1) {
-                                            console.log("Combiner " + robot_id + " requires more energy");
-                                            callback(null, false);
-                                        }
-                                        else {
-                                            callback(null, true);
-                                        }
-                                    });
-                                }
-                                else if(type == "diffusor") {
-                                    //If diffusor, check if energy limit is reached
-                                    var sql_check_energy = "SELECT r.robot_id \
-                                                            FROM robot r \
-                                                                INNER JOIN ( \
-                                                                    SELECT DISTINCT robot_id, build_start_time \
-                                                                    FROM item_robot \
-                                                                    WHERE build_end_time IS NOT NULL \
-                                                                ) ir ON r.robot_id = ir.robot_id \
-                                                                INNER JOIN diffusor d ON r.robot_type_id = d.diffusor_id \
-                                                            WHERE \
-                                                                r.robot_id = ? \
-                                                            GROUP BY r.robot_id \
-                                                            HAVING SUM(d.energy_released) >= MIN(energy_limit)";
-                                    con.query(sql_check_energy, [robot_id], function (err_energy, result_energy) {
-                                        if(err_energy) throw err_energy;
-                                        
-                                        if(result_energy.length == 0) {
-                                            callback(null, true);
-                                        }
-                                        else {
-                                            console.log("Diffusor " + robot_id + " energy limit exceeded.");
-                                            callback(null, false);
-                                        }
-                                    });
-                                }
-                            });
+                                // Check if energy is sufficient if it is combiner, check if energy limit is reached if diffusor
+                                // so get the type of the robot first
+                                self.getType(function(err_type, type){
+                                    if(err_type) {
+                                        callback(err_type);
+                                        return;
+                                    }
+                                    
+                                    if(type == "combiner") {
+                                        //If combiner, check if energy is sufficient 
+                                        var sql_check_energy = "SELECT 1 \
+                                                                FROM robot r \
+                                                                    INNER JOIN combiner c ON r.robot_type_id = c.combiner_id \
+                                                                    INNER JOIN planet_user pu ON r.planet_user_id = pu.planet_user_id\
+                                                                WHERE   \
+                                                                    r.robot_id = ? \
+                                                                    AND pu.energy >= c.energy_required";
+                                        con.query(sql_check_energy, [robot_id], function (err_energy, result_energy) {
+                                            if (err_energy) {
+                                                console.log('Error encountered on ' + Date());
+                                                console.log(err_energy);
+                                                callback(err_energy);
+                                                con.release();
+                                                return;
+                                            }
+                                            
+                                            if(result_energy.length != 1) {
+                                                console.log("Combiner " + robot_id + " requires more energy");
+                                                callback(null, false);
+                                                con.release();
+                                            }
+                                            else {
+                                                callback(null, true);
+                                                con.release();
+                                            }
+                                        });
+                                    }
+                                    else if(type == "diffusor") {
+                                        //If diffusor, check if energy limit is reached
+                                        var sql_check_energy = "SELECT r.robot_id \
+                                                                FROM robot r \
+                                                                    INNER JOIN ( \
+                                                                        SELECT DISTINCT robot_id, build_start_time \
+                                                                        FROM item_robot \
+                                                                        WHERE build_end_time IS NOT NULL \
+                                                                    ) ir ON r.robot_id = ir.robot_id \
+                                                                    INNER JOIN diffusor d ON r.robot_type_id = d.diffusor_id \
+                                                                WHERE \
+                                                                    r.robot_id = ? \
+                                                                GROUP BY r.robot_id \
+                                                                HAVING SUM(d.energy_released) >= MIN(energy_limit)";
+                                        con.query(sql_check_energy, [robot_id], function (err_energy, result_energy) {
+                                            if (err_energy) {
+                                                console.log('Error encountered on ' + Date());
+                                                console.log(err_energy);
+                                                callback(err_energy);
+                                                con.release();
+                                                return;
+                                            }
+                                            
+                                            if(result_energy.length == 0) {
+                                                callback(null, true);
+                                                con.release();
+                                            }
+                                            else {
+                                                console.log("Diffusor " + robot_id + " energy limit exceeded.");
+                                                callback(null, false);
+                                                con.release();
+                                            }
+                                        });
+                                    }
+                                });
+                            }
                         }
-                    }
-                });
-            }
+                    });
+                }
+            });
+
         });
     }
     
@@ -320,7 +501,7 @@ class Robot {
         
         // Check if robot can build items 
         self.canBuild(self, function(err, can_build) {
-            if(err) throw err;
+            if(err) callback(err);
             if(can_build) {
                 // If the production time ( = start_time + time_required) is greater than current time, then cannot produce
                 if(currTime.isBefore(moment(start_time).add(time_required,'seconds'))) {
@@ -375,51 +556,93 @@ class Robot {
                     
                     // Insert item into planet_user_item
                     self.getParameters(function(err, params) {
-                        if(err) throw err;
-                        con.query(sql_insert_item, [robot_id, params.type.qty_produced], function(err_insert, result_insert) {
-                            if(err_insert) throw err_insert;
-                            
-                            console.log("Robot " + robot_id + " inserted production items.");
-                            // Update consumed item's quantity
-                            con.query(sql_update_item, [robot_id], function(err_update_item) {
-                                if(err_update_item) throw err_update_item;
-                                console.log("Robot " + robot_id + " updated consuming items.");
+                        if(err) {
+                            callback(err);
+                            return;
+                        }
+                        pool.getConnection(function(con_err, con) {
+                            if(con_err) {
+                                console.log("Error - " + Date() + "\nUnable to connect to database.");
+                                callback(con_err);
+                                return;
+                            }
+                            con.query(sql_insert_item, [robot_id, params.type.qty_produced], function(err_insert, result_insert) {
+                                if (err_insert) {
+                                    console.log('Error encountered on ' + Date());
+                                    console.log(err_insert);
+                                    callback(err_insert);
+                                    con.release();
+                                    return;
+                                }
                                 
-                                var energy_used = (params.type.type == "combiner")?-1 * params.type.energy:params.type.energy;
-                                
-                                // Update planet_user energy
-                                con.query(sql_update_energy, [energy_used,robot_id], function(err_update_energy) {
-                                    if(err_update_energy) throw err_update_energy;
-                                    console.log("Robot " + robot_id + " updated energy in planet.");
+                                console.log("Robot " + robot_id + " inserted production items.");
+                                // Update consumed item's quantity
+                                con.query(sql_update_item, [robot_id], function(err_update_item) {
+                                    if (err_update_item) {
+                                        console.log('Error encountered on ' + Date());
+                                        console.log(err_update_item);
+                                        callback(err_update_item);
+                                        con.release();
+                                        return;
+                                    }
+                                    console.log("Robot " + robot_id + " updated consuming items.");
                                     
-                                    var new_start_time = moment(start_time).add(time_required, 'seconds').format("YYYY-MM-DD HH:mm:ss");
-                                    console.log("New start time: " + new_start_time);
+                                    var energy_used = (params.type.type == "combiner")?-1 * params.type.energy:params.type.energy;
                                     
-                                    // Update the build end time in item_robot
-                                    con.query(sql_update_log, [new_start_time, robot_id], function(err_update_log) {
-                                        if(err_update_log) throw err_update_log;
-                                        console.log("Robot " + robot_id + " updated build end time.");
+                                    // Update planet_user energy
+                                    con.query(sql_update_energy, [energy_used,robot_id], function(err_update_energy) {
+                                        if (err_update_energy) {
+                                            console.log('Error encountered on ' + Date());
+                                            console.log(err_update_energy);
+                                            callback(err_update_energy);
+                                            con.release();
+                                            return;
+                                        }
+                                        console.log("Robot " + robot_id + " updated energy in planet.");
                                         
-                                        //Insert new log if new_start_time is before current time
-                                        if(moment(new_start_time).isBefore(currTime)) {
-                                            con.query(sql_insert_log, [new_start_time, robot_id], function(err_insert_log, result_insert_log) {
-                                                console.log("Robot " + robot_id + " inserted new log.");
-                                                if(err_insert_log) 
-                                                    throw err_insert_log;
-                                                else {
+                                        var new_start_time = moment(start_time).add(time_required, 'seconds').format("YYYY-MM-DD HH:mm:ss");
+                                        console.log("New start time: " + new_start_time);
+                                        
+                                        // Update the build end time in item_robot
+                                        con.query(sql_update_log, [new_start_time, robot_id], function(err_update_log) {
+                                            if (err_update_log) {
+                                                console.log('Error encountered on ' + Date());
+                                                console.log(err_update_log);
+                                                callback(err_update_log);
+                                                con.release();
+                                                return;
+                                            }
+                                            console.log("Robot " + robot_id + " updated build end time.");
+                                            
+                                            //Insert new log if new_start_time is before current time
+                                            if(moment(new_start_time).isBefore(currTime)) {
+                                                con.query(sql_insert_log, [new_start_time, robot_id], function(err_insert_log, result_insert_log) {
+                                                    if (err_insert_log) {
+                                                        console.log('Error encountered on ' + Date());
+                                                        console.log(err_insert_log);
+                                                        callback(err_insert_log);
+                                                        con.release();
+                                                        return;
+                                                    }
+                                                    console.log("Robot " + robot_id + " inserted new log.");
+                                                    
                                                     callback(null, true, true);
-                                                }
-                                            });
-                                        }
-                                        else {
-                                            callback(null, true, false);
-                                        }
+                                                    con.release();
+                                                    
+                                                });
+                                            }
+                                            else {
+                                                callback(null, true, false);
+                                                con.release();
+                                            }
+                                        });
                                     });
+    
                                 });
-
+                                
                             });
-                            
                         });
+                            
     
                     });
                 }
@@ -427,7 +650,10 @@ class Robot {
             else {
                 //If robot cannot build, turn off enabled flag.
                 self.toggleEnabled(0,function(err_repeat, result_repeat){
-                    if (err_repeat) throw err_repeat;
+                    if (err_repeat) {
+                        callback(err_repeat);
+                        return;
+                    }
                     callback(null, false);
                 });
             }
@@ -441,26 +667,41 @@ class Robot {
         var sql = "SELECT MAX(build_start_time) start_time, MAX(time_required) time_required  \
                     FROM item_robot NATURAL RIGHT JOIN robot NATURAL RIGHT JOIN robot_type\
                     WHERE robot_id = ? AND enabled = 1 AND build_end_time IS NULL";
-                    
-        con.query(sql, [self.robot_id], function(err, result) {
-            if(err) {
-                throw err;
+        pool.getConnection(function(con_err, con) {
+            if(con_err) {
+                console.log("Error - " + Date() + "\nUnable to connect to database.");
+                callback(con_err);
+                return;
             }
-            else {
+            
+            con.query(sql, [self.robot_id], function(err, result) {
+                if (err) {
+                    console.log('Error encountered on ' + Date());
+                    console.log(err);
+                    callback(err);
+                    con.release();
+                    return;
+                } 
+                
                 //If build start time is not present, the start with current time.
                 var start_time = (result[0].start_time)?moment(result[0].start_time).format("YYYY-MM-DD HH:mm:ss"):moment().format("YYYY-MM-DD HH:mm:ss");
                 
                 console.log("Robot " + self.robot_id + " : " + start_time);
                 self.produceItem(self, start_time, result[0].time_required, function(err_produce, result_produce, repeat) {
-                   if(err_produce) 
-                       throw err_produce;
-                   else
-                       callback(null, result_produce, repeat);
+                   if(err_produce) {
+                       callback(err_produce);
+                       return;
+                   }
+                   
+                   callback(null, result_produce, repeat);
+                   con.release();
                         
                 });
+                    
                 
-            }
-        });
+            });
+
+        });            
     }
 }
 
